@@ -23,12 +23,17 @@
 
 /* Libraries */
 
-/*#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include "lwip/netdb.h"
-#include "lwip/dns.h"*/
-#include "esp_tls.h"
+#ifdef ARDUINO
+    #include <Arduino.h>
+    #include <WiFiClientSecure.h>
+#else /* ESP-IDF */
+    /*#include "lwip/err.h"
+    #include "lwip/sockets.h"
+    #include "lwip/sys.h"
+    #include "lwip/netdb.h"
+    #include "lwip/dns.h"*/
+    #include "esp_tls.h"
+#endif
 
 /**************************************************************************************************/
 
@@ -52,12 +57,6 @@
 
 /* Library Data Types */
 
-/**************************************************************************************************/
-
-/* Telegram Certificate */
-
-extern const uint8_t tlg_api_ca_pem_start[] asm("_binary_res_certs_apitelegramorg_crt_start");
-extern const uint8_t tlg_api_ca_pem_end[] asm("_binary_res_certs_apitelegramorg_crt_end");
 
 /**************************************************************************************************/
 
@@ -70,8 +69,12 @@ class uTLGBot
         bool is_connected(void);
 
     private:
-        esp_tls_cfg_t* _tls_cfg;
-        struct esp_tls* _tls;
+        #ifdef ARDUINO
+            WiFiClientSecure* _client;
+        #else /* ESP-IDF */
+            esp_tls_cfg_t* _tls_cfg;
+            struct esp_tls* _tls;
+        #endif
         char _token[TOKEN_LENGTH];
         char _tlg_api[TELEGRAM_API_LENGTH];
         bool _connected;
