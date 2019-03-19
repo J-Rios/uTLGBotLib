@@ -10,7 +10,7 @@
 /* Libraries */
 
 // Standard C/C++ libraries
-
+#include <string.h>
 
 // Device libraries (ESP-IDF)
 #include "sdkconfig.h"
@@ -19,7 +19,7 @@
 #include "esp_event_loop.h"
 
 // Custom libraries
-//#include "utlgbot.h"
+#include "utlgbotlib.h"
 
 /**************************************************************************************************/
 
@@ -55,7 +55,7 @@ volatile bool wifi_has_ip = false;
 void app_main(void)
 {
     // Create Bot object
-    //TLGBot Bot(TLG_TOKEN);
+    uTLGBot Bot(TLG_TOKEN);
     
     // Initialize Non-Volatile-Storage
     nvs_init();
@@ -64,14 +64,22 @@ void app_main(void)
     // Main loop
     while(1)
     {
-        // Wait 100ms
-        vTaskDelay(100/portTICK_PERIOD_MS);
-
         // Check if device is not connected
         if(!wifi_connected || !wifi_has_ip)
+        {
+            // Wait 100ms and check again
+            vTaskDelay(100/portTICK_PERIOD_MS);
             continue;
+        }
         
-        //Bot.getMe();
+        // Test connection and disconnection
+        printf("Connection: %d\n", Bot.is_connected());
+        Bot.connect();
+        printf("Connection: %d\n", Bot.is_connected());
+        Bot.disconnect();
+        printf("Connection: %d\n", Bot.is_connected());
+        
+        // Wait 1 min for next iteration
         vTaskDelay(60000/portTICK_PERIOD_MS);
     }
 }
