@@ -86,7 +86,11 @@ void app_main(void)
         */
 
         // Test Bot getMe command
-        Bot.getMe();
+        //Bot.getMe();
+
+        // Test Bot sendMessage command
+        Bot.sendMessage(-244141233, "Hello world");
+        Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
         
         // Wait 1 min for next iteration
         vTaskDelay(60000/portTICK_PERIOD_MS);

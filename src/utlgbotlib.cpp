@@ -129,7 +129,84 @@ uint8_t uTLGBot::getMe(void)
     // Parse and check response
     _println(F("\n[Bot] Response received:"));
     _println(_response);
-    _println("");
+    _println(" ");
+
+    // Disconnect from telegram server
+    if(is_connected())
+        disconnect();
+
+    return true;
+}
+
+// Request Bot send text message to specified chat ID (The Bot should be in that Chat)
+// Note: reply_markup not implemented
+uint8_t uTLGBot::sendMessage(const int64_t chat_id, const char* text, const char* parse_mode, 
+    bool disable_web_page_preview, bool disable_notification, uint64_t reply_to_message_id)
+{
+    uint8_t request_result;
+    bool connected;
+    
+    // Connect to telegram server
+    connected = is_connected();
+    if(!connected)
+    {
+        connected = connect();
+        if(!connected)
+            return false;
+    }
+    
+    // Create HTTP Body request data
+    char msg[HTTP_MAX_BODY_LENGTH];
+    snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("{\"chat_id\":%" PRIi64 ", \"text\":\"%s\"}"), 
+        chat_id, text);
+    // If parse_mode is not empty
+    if(strcmp(parse_mode, "") != 0)
+    {
+        // If parse mode has an expected value
+        if((strcmp(parse_mode, "Markdown") == 0) || (strcmp(parse_mode, "HTML") == 0))
+        {
+            // Remove last brace and append the new field
+            msg[strlen(msg)-1] = '\0';
+            snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"parse_mode\":\"%s\"}"), msg, parse_mode);
+        }
+        else
+            _println("[Bot] Warning: Invalid parse_mode provided.");
+    }
+    // Remove last brace and append disable_web_page_preview value if true
+    if(disable_web_page_preview)
+    {
+        msg[strlen(msg)-1] = '\0';
+        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"disable_web_page_preview\":true}"), msg);
+    }
+    // Remove last brace and append disable_notification value if true
+    if(disable_notification)
+    {
+        msg[strlen(msg)-1] = '\0';
+        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"disable_notification\":true}"), msg);
+    }
+    // Remove last brace and append reply_to_message_id value if set
+    if(reply_to_message_id != 0)
+    {
+        msg[strlen(msg)-1] = '\0';
+        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"reply_to_message_id\":%" PRIu64 "}"), 
+            msg, reply_to_message_id);
+    }
+
+    // Send the request
+    _println(F("[Bot] Trying to send message request..."));
+    request_result = tlg_post(API_CMD_SEND_MSG, msg, strlen(msg), _response, HTTP_MAX_RES_LENGTH);
+    
+    // Check if request has fail
+    if(request_result == 0)
+    {
+        _println(F("[Bot] Command fail, no response received."));
+        return false;
+    }
+
+    // Parse and check response
+    _println(F("\n[Bot] Response received:"));
+    _println(_response);
+    _println(" ");
 
     // Disconnect from telegram server
     if(is_connected())
@@ -151,6 +228,74 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     // Create URI and send GET request
     snprintf_P(uri, HTTP_MAX_URI_LENGTH, PSTR("%s/%s"), _tlg_api, command);
     if(https_client_get(uri, TELEGRAM_HOST, response, response_len) > 0)
+        return false;
+    
+    // Check and remove response header (just keep response body)
+    memset(reader_buff, '\0', HTTP_MAX_RES_LENGTH);
+    if(!cstr_read_until_word(response, "\r\n\r\n", reader_buff, false))
+    {
+        // Clear response if unexpected response
+        _println("[Bot] Unexpected response.");
+        memset(response, '\0', response_len);
+        return false;
+    }
+
+    // Check for and get request "ok" response key
+    // Note: We are assumming "ok" attribute comes before "response" attribute 
+    // (not preserving response buffer)
+    memset(reader_buff, '\0', HTTP_MAX_RES_LENGTH);
+    if(!cstr_read_until_word(response, "\"ok\":", reader_buff, false))
+    {
+        // Clear response if unexpected response
+        _println("[Bot] Unexpected response.");
+        memset(response, '\0', response_len);
+        return false;
+    }
+    memset(reader_buff, '\0', HTTP_MAX_RES_LENGTH);
+    if(!cstr_read_until_word(response, ",", reader_buff, false))
+    {
+        // Clear response if unexpected response
+        _println("[Bot] Unexpected response.");
+        memset(response, '\0', response_len);
+        return false;
+    }
+    reader_buff[strlen(reader_buff)-1] = '\0';
+
+    // Check if request "ok" response value is "true"
+    if(strcmp(reader_buff, "true") != 0)
+    {
+        // Clear response due bad request response ("ok" != true)
+        _println("[Bot] Bad request.");
+        memset(response, '\0', response_len);
+        return false;
+    }
+
+    // Remove root json response and just keep "result" attribute json value in response buffer
+    // i.e. for response: {"ok":true,"result":{"id":123456789,"first_name":"esp8266_Bot"}}
+    // just keep: {"id":123456789,"first_name":"esp8266_Bot"}
+    memset(reader_buff, '\0', HTTP_MAX_RES_LENGTH);
+    if(!cstr_read_until_word(response, "\"result\":", reader_buff, false))
+    {
+        // Clear response if unexpected response
+        _println("[Bot] Unexpected response.");
+        memset(response, '\0', response_len);
+        return false;
+    }
+    response[strlen(response)-1] = '\0';
+    
+    return true;
+}
+
+// Make and send a HTTP GET request
+uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t body_len, 
+    char* response, const size_t response_len)
+{
+    char uri[HTTP_MAX_URI_LENGTH];
+    char reader_buff[HTTP_MAX_RES_LENGTH];
+    
+    // Create URI and send POST request
+    snprintf_P(uri, HTTP_MAX_URI_LENGTH, PSTR("%s/%s"), _tlg_api, command);
+    if(https_client_post(uri, TELEGRAM_HOST, body, body_len, response, response_len) > 0)
         return false;
     
     // Check and remove response header (just keep response body)
@@ -294,7 +439,7 @@ size_t uTLGBot::https_client_write(const char* request)
                 written_bytes += ret;
             else if(ret != MBEDTLS_ERR_SSL_WANT_READ  && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
             {
-                _printf("HTTPS client write error 0x%x\n", ret);
+                _printf("[HTTPS] Client write error 0x%x\n", ret);
                 break;
             }
         } while(written_bytes < strlen(request));
@@ -330,7 +475,7 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
             return false;
         if(ret < 0)
         {
-            _printf("HTTPS client read error -0x%x\n", -ret);
+            _printf("[HTTPS] Client read error -0x%x\n", -ret);
             return false;
         }
         
@@ -348,19 +493,81 @@ uint8_t uTLGBot::https_client_get(const char* uri, const char* host, char* respo
     char request[HTTP_MAX_GET_LENGTH];
 
     // Clear response buffer and create request
+    // Note that we use specific header values for Telegram requests
     memset(response, '\0', response_len);
     snprintf_P(request, HTTP_MAX_GET_LENGTH, PSTR("GET %s HTTP/1.1\r\nHost: %s\r\n" \
                "User-Agent: ESP32\r\nAccept: text/html,application/xml,application/json" \
                "\r\n\r\n"), uri, host);
 
     // Send request
-    //_printf("HTTP request to send: %s\n\n", request);
+    _printf("HTTP request to send: %s\n\n", request);
     if(https_client_write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
         return 1;
     }
     _println(F("[HTTPS] GET request successfully sent."));
+
+    // Wait and read response
+    _println(F("[HTTPS] Waiting for response..."));
+    t0 = _millis();
+    while(true)
+    {
+        t1 = _millis();
+
+        // Check for overflow
+        // Note: Due Arduino millis() return an unsigned long instead specific size type, lets just 
+        // handle overflow by reseting counter (this time the timeout can be < 2*expected_timeout)
+        if(t1 < t0)
+        {
+            t0 = 0;
+            continue;
+        }
+
+        // Check for timeout
+        if(t1-t0 >= response_timeout)
+        {
+            _println(F("[HTTPS] Error: No response from server (wait response timeout)."));
+            return 2;
+        }
+
+        // Check for response
+        if(https_client_read(response, response_len))
+        {
+            _println(F("[HTTPS] Response successfully received."));
+            break;
+        }
+    }
+
+    //_printf("[HTTPS] Response: %s\n\n", response);
+    
+    return 0;
+}
+
+// Make and send a HTTP POST request
+uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char* body, 
+            const uint64_t body_len, char* response, const size_t response_len, 
+            const unsigned long response_timeout)
+{
+    unsigned long t0, t1;
+    char request[HTTP_MAX_POST_LENGTH];
+
+    // Clear response buffer and create request
+    // Note that we use specific header values for Telegram requests
+    memset(response, '\0', response_len);
+    snprintf_P(request, HTTP_MAX_POST_LENGTH, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
+               "User-Agent: ESP32\r\nAccept: text/html,application/xml,application/json" \
+               "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n%s"), uri, 
+               host, body_len, body);
+
+    // Send request
+    _printf("HTTP request to send: %s\n\n", request);
+    if(https_client_write(request) != strlen(request))
+    {
+        _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
+        return 1;
+    }
+    _println(F("[HTTPS] POST request successfully sent."));
 
     // Wait and read response
     _println(F("[HTTPS] Waiting for response..."));
