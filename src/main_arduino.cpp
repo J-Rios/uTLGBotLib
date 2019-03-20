@@ -3,7 +3,7 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 19 mar. 2019
+// Last modified date: 20 mar. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -72,11 +72,16 @@ void loop()
     }
     
     // Test connection and disconnection
+    /*
     printf("Connection: %d\n", Bot.is_connected());
     Bot.connect();
     printf("Connection: %d\n", Bot.is_connected());
     Bot.disconnect();
     printf("Connection: %d\n", Bot.is_connected());
+    */
+
+    // Test Bot getMe command
+    Bot.getMe();
     
     // Wait 1 min for next iteration
     delay(60000);
