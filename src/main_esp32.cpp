@@ -3,7 +3,7 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 20 mar. 2019
+// Last modified date: 21 mar. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -76,21 +76,40 @@ void app_main(void)
             continue;
         }
         
-        // Test connection and disconnection
         /*
+        // Test connection and disconnection
         printf("Connection: %d\n", Bot.is_connected());
         Bot.connect();
         printf("Connection: %d\n", Bot.is_connected());
         Bot.disconnect();
         printf("Connection: %d\n", Bot.is_connected());
-        */
 
         // Test Bot getMe command
-        //Bot.getMe();
+        Bot.getMe();
 
         // Test Bot sendMessage command
         Bot.sendMessage(-244141233, "Hello world");
         Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
+        */
+        
+        // Test Bot getUpdate command and receive messages
+        uint8_t num_received_messages = Bot.getUpdates();
+        uint8_t i;
+        while(num_received_messages > 0)
+        {
+            i = num_received_messages;
+            
+            printf("Received message.\n");
+            printf("Chat ID: %d\n", Bot.received_msg[i].chat_id);
+            printf("Chat Title: %s\n", Bot.received_msg[i].chat_title);
+            printf("Chat Alias: %s\n", Bot.received_msg[i].alias);
+            printf("Sent date (UNIX epoch time): %d\n", Bot.received_msg[i].date);
+            printf("From user: %s\n", Bot.received_msg[i].from_user);
+            printf("Text:\n%s\n", Bot.received_msg[i].text);
+            printf("-----------------------------------------\n");
+
+            num_received_messages = num_received_messages - 1;
+        }
         
         // Wait 1 min for next iteration
         vTaskDelay(60000/portTICK_PERIOD_MS);

@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 20 mar. 2019
+// Last modified date: 21 mar. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -27,11 +27,6 @@
     #include <Arduino.h>
     #include <WiFiClientSecure.h>
 #else /* ESP-IDF */
-    /*#include "lwip/err.h"
-    #include "lwip/sockets.h"
-    #include "lwip/sys.h"
-    #include "lwip/netdb.h"
-    #include "lwip/dns.h"*/
     #include "esp_tls.h"
 #endif
 
@@ -67,6 +62,12 @@
 // HTTP response wait timeout (ms)
 #define HTTP_WAIT_RESPONSE_TIMEOUT 3000
 
+// Telegram getUpdate Long Poll value (s)
+#define TLG_LONG_POLL 10
+
+// Telegram Max number of expected messages
+#define TLG_MAX_NUM_MSGS 256
+
 /**************************************************************************************************/
 
 /* Telegram API Commands and Contents */
@@ -74,31 +75,29 @@
 // Commands
 #define API_CMD_GET_ME "getMe"
 #define API_CMD_SEND_MSG "sendMessage"
-
-// Content of sendMessage
-/*
-#define API_CONT_SEND_MSG \
-    "{" \
-        "chat_id=%d," \
-        "text=%s," \
-        "parse_mode=%s," \
-        "disable_web_page_preview=false," \
-        "disable_notification=false," \
-        "reply_to_message_id=%d," \
-        "reply_markup=" \
-    "}"
-*/
+#define API_CMD_GET_UPDATES "getUpdates"
 
 /**************************************************************************************************/
 
 /* Library Data Types */
 
+typedef struct message_data
+{
+    int chat_id;
+    char* chat_title;
+    char* alias;
+    int date;
+    char* from_user;
+    char* text;
+} message_data;
 
 /**************************************************************************************************/
 
 class uTLGBot
 {
     public:
+        message_data received_msg[TLG_MAX_NUM_MSGS];
+
         uTLGBot(const char* token);
         uint8_t connect(void);
         void disconnect(void);
@@ -107,6 +106,7 @@ class uTLGBot
         uint8_t sendMessage(const int64_t chat_id, const char* text, const char* parse_mode="", 
             bool disable_web_page_preview=false, bool disable_notification=false, 
             uint64_t reply_to_message_id=0);
+        uint8_t getUpdates(void);
 
     private:
         #ifdef ARDUINO
@@ -119,10 +119,13 @@ class uTLGBot
         char _tlg_api[TELEGRAM_API_LENGTH];
         char _response[HTTP_MAX_RES_LENGTH];
         bool _connected;
+        uint8_t _last_received_msg;
 
-        uint8_t tlg_get(const char* command, char* response, const size_t response_len);
+        uint8_t tlg_get(const char* command, char* response, const size_t response_len, 
+            const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
         uint8_t tlg_post(const char* command, const char* body, const size_t body_len, 
-            char* response, const size_t response_len);
+            char* response, const size_t response_len, 
+            const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
         void https_client_init(void);
         bool https_client_connect(const char* host, int port);

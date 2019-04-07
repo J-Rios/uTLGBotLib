@@ -3,7 +3,7 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 20 mar. 2019
+// Last modified date: 21 mar. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -71,21 +71,40 @@ void loop()
         return;
     }
     
-    // Test connection and disconnection
     /*
-    printf("Connection: %d\n", Bot.is_connected());
+    // Test connection and disconnection
+    Serial.printf("Connection: %d\n", Bot.is_connected());
     Bot.connect();
-    printf("Connection: %d\n", Bot.is_connected());
+    Serial.printf("Connection: %d\n", Bot.is_connected());
     Bot.disconnect();
-    printf("Connection: %d\n", Bot.is_connected());
-    */
-
+    Serial.printf("Connection: %d\n", Bot.is_connected());
+    
     // Test Bot getMe command
-    //Bot.getMe();
+    Bot.getMe();
 
     // Test Bot sendMessage command
     Bot.sendMessage(-244141233, "Hello world");
     Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
+    */
+
+    // Test Bot getUpdate command and receive messages
+    uint8_t num_received_messages = Bot.getUpdate();
+    uint8_t i;
+    while(num_received_messages > 0)
+    {
+        i = num_received_messages;
+
+        Serial.printf("Received message.\n");
+        Serial.printf("Chat ID: %d\n", Bot.received_msg[i].chat_id);
+        Serial.printf("Chat Title: %s\n", Bot.received_msg[i].chat_title);
+        Serial.printf("Chat Alias: %s\n", Bot.received_msg[i].alias);
+        Serial.printf("Sent date (UNIX epoch time): %d\n", Bot.received_msg[i].date);
+        Serial.printf("From user: %s\n", Bot.received_msg[i].from_user);
+        Serial.printf("Text:\n%s\n", Bot.received_msg[i].text);
+        Serial.println("-----------------------------------------");
+
+        num_received_messages = num_received_messages - 1;
+    }
     
     // Wait 1 min for next iteration
     delay(60000);

@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 20 mar. 2019
+// Last modified date: 21 mar. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -50,6 +50,7 @@ uTLGBot::uTLGBot(const char* token)
     snprintf(_tlg_api, TELEGRAM_API_LENGTH, "/bot%s", token);
     memset(_response, '\0', HTTP_MAX_RES_LENGTH);
     _connected = false;
+    _last_received_msg = 1;
 }
 
 /**************************************************************************************************/
@@ -123,6 +124,11 @@ uint8_t uTLGBot::getMe(void)
     if(request_result == 0)
     {
         _println(F("[Bot] Command fail, no response received."));
+
+        // Disconnect from telegram server
+        if(is_connected())
+            disconnect();
+            
         return false;
     }
 
@@ -200,6 +206,11 @@ uint8_t uTLGBot::sendMessage(const int64_t chat_id, const char* text, const char
     if(request_result == 0)
     {
         _println(F("[Bot] Command fail, no response received."));
+
+        // Disconnect from telegram server
+        if(is_connected())
+            disconnect();
+            
         return false;
     }
 
@@ -215,19 +226,72 @@ uint8_t uTLGBot::sendMessage(const int64_t chat_id, const char* text, const char
     return true;
 }
 
+// Request for check how many availables messages are waiting to be received
+uint8_t uTLGBot::getUpdates(void)
+{
+    uint8_t num_received_messages = 0;
+    uint8_t request_result;
+    bool connected;
+    
+    // Connect to telegram server
+    connected = is_connected();
+    if(!connected)
+    {
+        connected = connect();
+        if(!connected)
+            return 0;
+    }
+
+    // Create HTTP Body request data (Note we limit updates to 50 and just allow "message" updates)
+    char msg[HTTP_MAX_BODY_LENGTH];
+    snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("{\"offset\":%" PRIu8 ", \"limit\":50, " \
+        "\"timeout\":%" PRIu64 ", \"allowed_updates\":[\"message\"]}"), _last_received_msg, 
+        (uint64_t)TLG_LONG_POLL);
+
+    // Send the request
+    _println(F("[Bot] Trying to send getUpdates request..."));
+    request_result = tlg_post(API_CMD_GET_UPDATES, msg, strlen(msg), _response, 
+        HTTP_MAX_RES_LENGTH, HTTP_WAIT_RESPONSE_TIMEOUT+(TLG_LONG_POLL*1000));
+    
+    // Check if request has fail
+    if(request_result == 0)
+    {
+        _println(F("[Bot] Command fail, no response received."));
+
+        // Disconnect from telegram server
+        if(is_connected())
+            disconnect();
+
+        return 0;
+    }
+
+    // Parse and check response
+    _println(F("\n[Bot] Response received:"));
+    _println(_response);
+    num_received_messages = 0;
+    _println(" ");
+
+    // Disconnect from telegram server
+    if(is_connected())
+        disconnect();
+    
+    return num_received_messages;
+}
+
 /**************************************************************************************************/
 
 /* Telegram API GET and POST Methods */
 
 // Make and send a HTTP GET request
-uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t response_len)
+uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t response_len, 
+    const unsigned long response_timeout)
 {
     char uri[HTTP_MAX_URI_LENGTH];
     char reader_buff[HTTP_MAX_RES_LENGTH];
     
     // Create URI and send GET request
     snprintf_P(uri, HTTP_MAX_URI_LENGTH, PSTR("%s/%s"), _tlg_api, command);
-    if(https_client_get(uri, TELEGRAM_HOST, response, response_len) > 0)
+    if(https_client_get(uri, TELEGRAM_HOST, response, response_len, response_timeout) > 0)
         return false;
     
     // Check and remove response header (just keep response body)
@@ -288,15 +352,18 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
 
 // Make and send a HTTP GET request
 uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t body_len, 
-    char* response, const size_t response_len)
+    char* response, const size_t response_len, const unsigned long response_timeout)
 {
     char uri[HTTP_MAX_URI_LENGTH];
     char reader_buff[HTTP_MAX_RES_LENGTH];
     
     // Create URI and send POST request
     snprintf_P(uri, HTTP_MAX_URI_LENGTH, PSTR("%s/%s"), _tlg_api, command);
-    if(https_client_post(uri, TELEGRAM_HOST, body, body_len, response, response_len) > 0)
+    if(https_client_post(uri, TELEGRAM_HOST, body, body_len, response, response_len, 
+        response_timeout) > 0)
+    {
         return false;
+    }
     
     // Check and remove response header (just keep response body)
     memset(reader_buff, '\0', HTTP_MAX_RES_LENGTH);
@@ -402,7 +469,8 @@ void uTLGBot::https_client_disconnect(void)
     #ifdef ARDUINO
         _client->stop();
     #else
-        esp_tls_conn_delete(_tls);
+        if(_tls != NULL)
+            esp_tls_conn_delete(_tls);
         _connected = false;
     #endif
 }
@@ -588,7 +656,7 @@ uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char
         // Check for timeout
         if(t1-t0 >= response_timeout)
         {
-            _println(F("[HTTPS] Error: No response from server (wait response timeout)."));
+            _println(F("[HTTPS] Error: No response from server (timeout)."));
             return 2;
         }
 
