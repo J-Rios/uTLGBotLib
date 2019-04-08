@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 21 mar. 2019
+// Last modified date: 08 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -299,7 +299,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     if(!cstr_read_until_word(response, "\r\n\r\n", reader_buff, false))
     {
         // Clear response if unexpected response
-        _println("[Bot] Unexpected response.");
+        _println(F("[Bot] Unexpected response."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -311,7 +311,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     if(!cstr_read_until_word(response, "\"ok\":", reader_buff, false))
     {
         // Clear response if unexpected response
-        _println("[Bot] Unexpected response.");
+        _println(F("[Bot] Unexpected response."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -319,7 +319,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     if(!cstr_read_until_word(response, ",", reader_buff, false))
     {
         // Clear response if unexpected response
-        _println("[Bot] Unexpected response.");
+        _println(F("[Bot] Unexpected response."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -329,7 +329,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     if(strcmp(reader_buff, "true") != 0)
     {
         // Clear response due bad request response ("ok" != true)
-        _println("[Bot] Bad request.");
+        _println(F("[Bot] Bad request."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -341,7 +341,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     if(!cstr_read_until_word(response, "\"result\":", reader_buff, false))
     {
         // Clear response if unexpected response
-        _println("[Bot] Unexpected response.");
+        _println(F("[Bot] Unexpected response."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -370,7 +370,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     if(!cstr_read_until_word(response, "\r\n\r\n", reader_buff, false))
     {
         // Clear response if unexpected response
-        _println("[Bot] Unexpected response.");
+        _println(F("[Bot] Unexpected response."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -382,7 +382,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     if(!cstr_read_until_word(response, "\"ok\":", reader_buff, false))
     {
         // Clear response if unexpected response
-        _println("[Bot] Unexpected response.");
+        _println(F("[Bot] Unexpected response."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -390,7 +390,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     if(!cstr_read_until_word(response, ",", reader_buff, false))
     {
         // Clear response if unexpected response
-        _println("[Bot] Unexpected response.");
+        _println(F("[Bot] Unexpected response."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -400,7 +400,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     if(strcmp(reader_buff, "true") != 0)
     {
         // Clear response due bad request response ("ok" != true)
-        _println("[Bot] Bad request.");
+        _println(F("[Bot] Bad request."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -412,7 +412,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     if(!cstr_read_until_word(response, "\"result\":", reader_buff, false))
     {
         // Clear response if unexpected response
-        _println("[Bot] Unexpected response.");
+        _println(F("[Bot] Unexpected response."));
         memset(response, '\0', response_len);
         return false;
     }
@@ -507,7 +507,7 @@ size_t uTLGBot::https_client_write(const char* request)
                 written_bytes += ret;
             else if(ret != MBEDTLS_ERR_SSL_WANT_READ  && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
             {
-                _printf("[HTTPS] Client write error 0x%x\n", ret);
+                _printf(F("[HTTPS] Client write error 0x%x\n"), ret);
                 break;
             }
         } while(written_bytes < strlen(request));
@@ -543,7 +543,7 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
             return false;
         if(ret < 0)
         {
-            _printf("[HTTPS] Client read error -0x%x\n", -ret);
+            _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
             return false;
         }
         
@@ -568,7 +568,7 @@ uint8_t uTLGBot::https_client_get(const char* uri, const char* host, char* respo
                "\r\n\r\n"), uri, host);
 
     // Send request
-    _printf("HTTP request to send: %s\n\n", request);
+    _printf(F("HTTP request to send: %s\n\n"), request);
     if(https_client_write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -607,7 +607,7 @@ uint8_t uTLGBot::https_client_get(const char* uri, const char* host, char* respo
         }
     }
 
-    //_printf("[HTTPS] Response: %s\n\n", response);
+    //_printf(F("[HTTPS] Response: %s\n\n"), response);
     
     return 0;
 }
@@ -629,7 +629,7 @@ uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char
                host, body_len, body);
 
     // Send request
-    _printf("HTTP request to send: %s\n\n", request);
+    _printf(F("HTTP request to send: %s\n\n"), request);
     if(https_client_write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -668,7 +668,7 @@ uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char
         }
     }
 
-    //_printf("[HTTPS] Response: %s\n\n", response);
+    //_printf(F("[HTTPS] Response: %s\n\n"), response);
     
     return 0;
 }
@@ -677,76 +677,156 @@ uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char
 
 /* Private Auxiliar Methods */
 
+// Parse and get each json elements from provided json format string
+uint32_t json_parse_str(const char* json_str, const size_t json_str_len, jsmntok_t* json_tokens, 
+    const uint32_t json_tokens_len)
+{
+    jsmn_parser json_parser;
+    int num_elements;
+
+    jsmn_init(&json_parser);
+    num_elements = jsmn_parse(&json_parser, json_str, json_str_len, json_tokens, json_tokens_len);
+    if(num_elements < 0)
+    {
+        _printf(F("Can't parse JSON data. Code %d.\n"), num_elements);
+        return 0;
+    }
+    if((num_elements == 0) || (json_tokens[0].type != JSMN_OBJECT))
+    {
+        _println(F("Can't parse JSON data (invalid sintax?)."));
+        return 0;
+    }
+
+    return num_elements;
+}
+
+// Check if given json object contains the provided key
+uint32_t json_has_key(const char* json_str, jsmntok_t* json_tokens, const uint32_t num_tokens, 
+    const char* key)
+{
+    for(uint32_t i = 0; i < num_tokens; i++)
+    {
+        // Continue to next iteration if json element is not a string
+        if(json_tokens[i].type != JSMN_STRING)
+            continue;
+
+        // Continue to next iteration if key and json elements lengths are different
+        if(strlen(key) != (unsigned int)(json_tokens[i].end-json_tokens[i].start))
+            continue;
+
+        // Check if key and json element string are the same
+        if(strncmp(json_str + json_tokens[i].start, key, 
+            json_tokens[i].end - json_tokens[i].start) == 0)
+        {
+            return i;
+        }
+    }
+    return 0;
+}
+
+// Get the corresponding string of given json element (token)
+void json_get_element_string(const char* json_str, jsmntok_t* token, char* converted_str, 
+    const uint32_t converted_str_len)
+{
+    uint32_t value_len = token->end - token->start;
+    const char* value = json_str + token->start;
+
+    memset(converted_str, '\0', converted_str_len);
+    for(uint32_t i = 0; i < value_len; i++) // Dont trust memcpy...
+        converted_str[i] = value[i];
+}
+
+// Get the corresponding string value of given json key
+uint8_t json_get_key_value(const char* key, const char* json_str, jsmntok_t* tokens, 
+    const uint32_t num_tokens, char* converted_str, const uint32_t converted_str_len)
+{
+    // Check for key
+    size_t key_position = json_has_key(json_str, tokens, num_tokens, key);
+    if(key_position == 0)
+    {
+        _println(F("No key found inside json."));
+        return false;
+    }
+    else
+    {
+        json_get_element_string(json_str, &tokens[key_position+1], converted_str, 
+            converted_str_len);
+    }
+    
+    return true;
+}
+
+
 // Read array until a specific word. The input string (str) split his content into readed chars 
 // (readed) and keep not readed ones
 bool uTLGBot::cstr_read_until_word(char* str, const char* word, char* readed, const bool preserve)
 {
-	const uint16_t readed_len = strlen(str);
-	char* read_word = new char[strlen(word) + 1]();
-	char char_read = '\0';
-	uint16_t a, b, i;
-	bool found = false;
+    const uint16_t readed_len = strlen(str);
+    char* read_word = new char[strlen(word) + 1]();
+    char char_read = '\0';
+    uint16_t a, b, i;
+    bool found = false;
 
-	a = 0;	b = 0;	i = 0;
-	memset(read_word, '\0', sizeof(strlen(word) + 1));
-	while(i < strlen(str) + 1)
-	{
-		char_read = str[i];
-		//printf("%c", char_read);
+    a = 0;	b = 0;	i = 0;
+    memset(read_word, '\0', sizeof(strlen(word) + 1));
+    while(i < strlen(str) + 1)
+    {
+        char_read = str[i];
+        //printf("%c", char_read);
 
-		if((readed_len > 0) && (a < readed_len - 1))
-		{
-			if(readed != NULL)
-				readed[a] = char_read;
-			a = a + 1;
-		}
+        if((readed_len > 0) && (a < readed_len - 1))
+        {
+            if(readed != NULL)
+                readed[a] = char_read;
+            a = a + 1;
+        }
 
-		if(char_read == word[b])
-		{
-			if(b < strlen(word))
-			{
-				read_word[b] = char_read;
-				b = b + 1;
-			}
+        if(char_read == word[b])
+        {
+            if(b < strlen(word))
+            {
+                read_word[b] = char_read;
+                b = b + 1;
+            }
 
-			if(b == strlen(word))
-			{
-				read_word[b] = '\0';
-				if(strcmp(read_word, word) == 0)
-				{
-					if(readed != NULL)
-						readed[a] = '\0';
+            if(b == strlen(word))
+            {
+                read_word[b] = '\0';
+                if(strcmp(read_word, word) == 0)
+                {
+                    if(readed != NULL)
+                        readed[a] = '\0';
 
-					// Remove readed data from str
-					if(!preserve)
-					{
-						a = 0;
-						i = i + 1;
-						while(i < strlen(str))
-						{
-							str[a] = str[i];
-							a = a + 1;
-							i = i + 1;
-						}
-						str[a] = '\0';
-					}
+                    // Remove readed data from str
+                    if(!preserve)
+                    {
+                        a = 0;
+                        i = i + 1;
+                        while(i < strlen(str))
+                        {
+                            str[a] = str[i];
+                            a = a + 1;
+                            i = i + 1;
+                        }
+                        str[a] = '\0';
+                    }
 
-					found = true;
-					break;
-				}
-			}
-		}
-		else
-		{
-			b = 0;
-			memset(read_word, '\0', sizeof(strlen(word) + 1));
-		}
+                    found = true;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            b = 0;
+            memset(read_word, '\0', sizeof(strlen(word) + 1));
+        }
 
-		i = i + 1;
-	}
+        i = i + 1;
+    }
 
-	if(readed != NULL)
-		readed[readed_len] = '\0';
+    if(readed != NULL)
+        readed[readed_len] = '\0';
 
-	return found;
+    return found;
 }

@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 21 mar. 2019
+// Last modified date: 08 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -16,8 +16,6 @@
 
 /* Defines & Macros */
 
-// Set to true or false to enable/disable FreeRTOS safe use of the input pin through multiples Tasks
-//#define FREERTOS_MUTEX true
 
 /**************************************************************************************************/
 
@@ -32,6 +30,8 @@
 
 #include <inttypes.h>
 #include <stdint.h>
+
+#include "jsmn.h"
 
 /**************************************************************************************************/
 
@@ -140,6 +140,14 @@ class uTLGBot
             const uint64_t body_len, char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
+        uint32_t json_parse_str(const char* json_str, const size_t json_str_len, 
+            jsmntok_t* json_tokens, const uint32_t json_tokens_len);
+        uint32_t json_has_key(const char* json_str, jsmntok_t* json_tokens, 
+            const uint32_t num_tokens, const char* key);
+        void json_get_element_string(const char* json_str, jsmntok_t* token, char* converted_str, 
+            const uint32_t converted_str_len);
+        uint8_t json_get_key_value(const char* key, const char* json_str, jsmntok_t* tokens, 
+            const uint32_t num_tokens, char* converted_str, const uint32_t converted_str_len);
         bool cstr_read_until_word(char* str, const char* word, char* readed, const bool preserve);
 };
 
