@@ -315,6 +315,11 @@ uint8_t uTLGBot::getUpdates(void)
 	if(num_elements == 0)
     {
         _println(F("[Bot] Error: Bad JSON sintax from received response."));
+
+        // Disconnect from telegram server
+        if(is_connected())
+            disconnect();
+        
 		return 0;
     }
 
