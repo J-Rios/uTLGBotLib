@@ -3,7 +3,7 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 07 apr. 2019
+// Last modified date: 19 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -88,22 +88,36 @@ void loop()
     */
 
     // Test Bot getUpdate command and receive messages
-    uint8_t num_received_messages = Bot.getUpdate();
-    uint8_t i;
-    while(num_received_messages > 0)
+    while(Bot.getUpdates())
     {
-        i = num_received_messages;
-
-        Serial.printf("Received message.\n");
-        Serial.printf("Chat ID: %d\n", Bot.received_msg[i].chat_id);
-        Serial.printf("Chat Title: %s\n", Bot.received_msg[i].chat_title);
-        Serial.printf("Chat Alias: %s\n", Bot.received_msg[i].alias);
-        Serial.printf("Sent date (UNIX epoch time): %d\n", Bot.received_msg[i].date);
-        Serial.printf("From user: %s\n", Bot.received_msg[i].from_user);
-        Serial.printf("Text:\n%s\n", Bot.received_msg[i].text);
         Serial.println("-----------------------------------------");
+        Serial.println("Received message.");
 
-        num_received_messages = num_received_messages - 1;
+        Serial.printf("  From chat ID: %d\n", Bot.received_msg.chat.id);
+        Serial.printf("  From chat type: %s\n", Bot.received_msg.chat.type);
+        Serial.printf("  From chat alias: %s\n", Bot.received_msg.chat.username);
+        Serial.printf("  From chat name: %s %s\n", Bot.received_msg.chat.first_name, 
+            Bot.received_msg.chat.last_name);
+        Serial.printf("  From chat title: %s\n", Bot.received_msg.chat.title);
+        if(Bot.received_msg.chat.all_members_are_administrators)
+            Serial.println("  From chat where all members are admins.");
+        else
+            Serial.println("  From chat where not all members are admins.");
+        
+        Serial.printf("  From user ID: %d\n", Bot.received_msg.from.id);
+        Serial.printf("  From user alias: %s\n", Bot.received_msg.from.username);
+        Serial.printf("  From user name: %s %s\n", Bot.received_msg.from.first_name, 
+            Bot.received_msg.from.last_name);
+        Serial.printf("  From user with language code: %s\n", Bot.received_msg.from.language_code);
+        if(Bot.received_msg.from.is_bot)
+            Serial.println("  From user that is a Bot.");
+        else
+            Serial.println("  From user that is not a Bot.");
+        
+        Serial.printf("  Message ID: %d\n", Bot.received_msg.message_id);
+        Serial.printf("  Message sent date (UNIX epoch time): %ul\n", Bot.received_msg.date);
+        Serial.printf("  Text: %s\n", Bot.received_msg.text);
+        Serial.printf("-----------------------------------------\n");
     }
     
     // Wait 1 min for next iteration

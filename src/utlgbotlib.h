@@ -28,7 +28,7 @@
     #include "esp_tls.h"
 #endif
 
-#define __STDC_LIMIT_MACROS 1 // This define could be needed and must be before inttypes include
+//#define __STDC_LIMIT_MACROS 1 // This define could be needed and must be before inttypes include
 #include <inttypes.h>
 #include <stdint.h>
 

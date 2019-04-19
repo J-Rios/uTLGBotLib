@@ -20,6 +20,7 @@
     #define _print(x) do { Serial.print(x); } while(0)
     #define _println(x) do { Serial.println(x); } while(0)
     #define _printf(...) do { Serial.printf(__VA_ARGS__); } while(0)
+    #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
 
     #define _millis() millis()
     #define _delay(x) do { delay(x); } while(0)
@@ -883,7 +884,9 @@ uint8_t uTLGBot::https_client_get(const char* uri, const char* host, char* respo
                "\r\n\r\n"), uri, host);
 
     // Send request
-    _printf(F("HTTP request to send: %s\n\n"), request);
+    _print(F("HTTP request to send: "));
+    _println(request);
+    _println();
     if(https_client_write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -944,7 +947,9 @@ uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char
                host, body_len, body);
 
     // Send request
-    _printf(F("HTTP request to send: %s\n\n"), request);
+    _print(F("HTTP request to send: "));
+    _println(request);
+    _println();
     if(https_client_write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -1024,7 +1029,9 @@ uint32_t uTLGBot::json_parse_str(const char* json_str, const size_t json_str_len
     num_elements = jsmn_parse(&json_parser, json_str, json_str_len, json_tokens, json_tokens_len);
     if(num_elements < 0)
     {
-        _printf(F("Can't parse JSON data. Code %d.\n"), num_elements);
+        _print(F("Can't parse JSON data. Code "));
+        _println(num_elements);
+        _println();
         return 0;
     }
     if((num_elements == 0) || (json_tokens[0].type != JSMN_OBJECT))
