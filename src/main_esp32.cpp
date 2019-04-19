@@ -3,7 +3,7 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 07 apr. 2019
+// Last modified date: 19 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -93,22 +93,36 @@ void app_main(void)
         */
         
         // Test Bot getUpdate command and receive messages
-        uint8_t num_received_messages = Bot.getUpdates();
-        uint8_t i;
-        while(num_received_messages > 0)
+        while(Bot.getUpdates())
         {
-            i = num_received_messages;
-            
-            printf("Received message.\n");
-            printf("Chat ID: %d\n", Bot.received_msg[i].chat_id);
-            printf("Chat Title: %s\n", Bot.received_msg[i].chat_title);
-            printf("Chat Alias: %s\n", Bot.received_msg[i].alias);
-            printf("Sent date (UNIX epoch time): %d\n", Bot.received_msg[i].date);
-            printf("From user: %s\n", Bot.received_msg[i].from_user);
-            printf("Text:\n%s\n", Bot.received_msg[i].text);
             printf("-----------------------------------------\n");
+            printf("Received message.\n");
 
-            num_received_messages = num_received_messages - 1;
+            printf("  From chat ID: %d\n", Bot.received_msg.chat.id);
+            printf("  From chat type: %s\n", Bot.received_msg.chat.type);
+            printf("  From chat alias: %s\n", Bot.received_msg.chat.username);
+            printf("  From chat name: %s %s\n", Bot.received_msg.chat.first_name, 
+                Bot.received_msg.chat.last_name);
+            printf("  From chat title: %s\n", Bot.received_msg.chat.title);
+            if(Bot.received_msg.chat.all_members_are_administrators)
+                printf("  From chat where all members are admins.\n");
+            else
+                printf("  From chat where not all members are admins.\n");
+            
+            printf("  From user ID: %d\n", Bot.received_msg.from.id);
+            printf("  From user alias: %s\n", Bot.received_msg.from.username);
+            printf("  From user name: %s %s\n", Bot.received_msg.from.first_name, 
+                Bot.received_msg.from.last_name);
+            printf("  From user with language code: %s\n", Bot.received_msg.from.language_code);
+            if(Bot.received_msg.from.is_bot)
+                printf("  From user that is a Bot.\n");
+            else
+                printf("  From user that is not a Bot.\n");
+            
+            printf("  Message ID: %d\n", Bot.received_msg.message_id);
+            printf("  Message sent date (UNIX epoch time): %ul\n", Bot.received_msg.date);
+            printf("  Text: %s\n", Bot.received_msg.text);
+            printf("-----------------------------------------\n");
         }
         
         // Wait 1 min for next iteration

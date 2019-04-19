@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 08 apr. 2019
+// Last modified date: 19 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -28,6 +28,7 @@
     #include "esp_tls.h"
 #endif
 
+#define __STDC_LIMIT_MACROS 1 // This define could be needed and must be before inttypes include
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -52,6 +53,9 @@
 // Telegram HTTPS Server Port
 #define HTTPS_PORT 443
 
+// HTTP response wait timeout (ms)
+#define HTTP_WAIT_RESPONSE_TIMEOUT 3000
+
 // Maximum HTTP GET and POST data lenght
 #define HTTP_MAX_URI_LENGTH 128
 #define HTTP_MAX_BODY_LENGTH 1024
@@ -59,14 +63,25 @@
 #define HTTP_MAX_POST_LENGTH HTTP_MAX_URI_LENGTH + HTTP_MAX_BODY_LENGTH
 #define HTTP_MAX_RES_LENGTH 5121
 
-// HTTP response wait timeout (ms)
-#define HTTP_WAIT_RESPONSE_TIMEOUT 3000
-
 // Telegram getUpdate Long Poll value (s)
 #define TLG_LONG_POLL 10
 
-// Telegram Max number of expected messages
-#define TLG_MAX_NUM_MSGS 256
+// JSON Max values length
+#define MAX_JSON_STRING_LEN 1024
+#define MAX_JSON_SUBVAL_LEN 512
+#define MAX_JSON_ELEMENTS 128
+#define MAX_JSON_SUBELEMENTS 64
+
+// Telegram data types Max values length
+#define MAX_USER_LENGTH 32
+#define MAX_USERNAME_LENGTH 32
+#define MAX_LANGUAGE_CODE_LENGTH 8
+#define MAX_CHAT_TYPE_LENGTH 16
+#define MAX_CHAT_TITLE_LENGTH 32
+#define MAX_CHAT_DESCRIPTION_LENGTH 128
+#define MAX_URL_LENGTH 64
+#define MAX_STICKER_NAME 32
+#define MAX_TEXT_LENGTH 1024
 
 /**************************************************************************************************/
 
@@ -79,24 +94,57 @@
 
 /**************************************************************************************************/
 
-/* Library Data Types */
+/* Telegram Data Types (Not all of them are implemented) */
 
-typedef struct message_data
+// User: https://core.telegram.org/bots/api#user
+typedef struct tlg_type_user
 {
-    int chat_id;
-    char* chat_title;
-    char* alias;
-    int date;
-    char* from_user;
-    char* text;
-} message_data;
+    int32_t id;
+    bool is_bot;
+    char first_name[MAX_USER_LENGTH];
+    char last_name[MAX_USER_LENGTH];
+    char username[MAX_USERNAME_LENGTH];
+    char language_code[MAX_LANGUAGE_CODE_LENGTH];
+} tlg_type_user;
+
+// Chat: https://core.telegram.org/bots/api#chat
+typedef struct tlg_type_chat
+{
+    int32_t id;
+    char type[MAX_CHAT_TYPE_LENGTH];
+    char title[MAX_CHAT_TITLE_LENGTH];
+    char username[MAX_USERNAME_LENGTH];
+    char first_name[MAX_USER_LENGTH];
+    char last_name[MAX_USER_LENGTH];
+    bool all_members_are_administrators;
+    //tlg_chatphoto_entity photo; // Uninplemented
+    //char description[MAX_CHAT_DESCRIPTION_LENGTH]; // Uninplemented
+    //char invite_link[MAX_URL_LENGTH]; // Uninplemented
+    //tlg_type_message pinned_message; // Uninplemented
+    //char sticker_set_name[MAX_STICKER_NAME]; // Uninplemented
+    //bool can_set_sticker_set; // Uninplemented
+} tlg_type_chat;
+
+// Message: https://core.telegram.org/bots/api#message
+typedef struct tlg_type_message
+{
+    int32_t message_id;
+    tlg_type_user from;
+    uint32_t date;
+    tlg_type_chat chat;
+    char text[MAX_TEXT_LENGTH];
+    //tlg_type_user forward_from;
+    //tlg_type_chat forward_from_chat;
+    //int32_t forward_from_message_id;
+    //...
+} tlg_type_message;
 
 /**************************************************************************************************/
 
 class uTLGBot
 {
     public:
-        message_data received_msg[TLG_MAX_NUM_MSGS];
+        tlg_type_message received_msg;
 
         uTLGBot(const char* token);
         uint8_t connect(void);
@@ -119,7 +167,7 @@ class uTLGBot
         char _tlg_api[TELEGRAM_API_LENGTH];
         char _response[HTTP_MAX_RES_LENGTH];
         bool _connected;
-        uint8_t _last_received_msg;
+        size_t _last_received_msg;
 
         uint8_t tlg_get(const char* command, char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
@@ -140,6 +188,7 @@ class uTLGBot
             const uint64_t body_len, char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
+        void clear_msg_data(void);
         uint32_t json_parse_str(const char* json_str, const size_t json_str_len, 
             jsmntok_t* json_tokens, const uint32_t json_tokens_len);
         uint32_t json_has_key(const char* json_str, jsmntok_t* json_tokens, 
