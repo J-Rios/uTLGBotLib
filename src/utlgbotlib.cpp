@@ -51,6 +51,10 @@ uTLGBot::uTLGBot(const char* token)
     snprintf(_token, TOKEN_LENGTH, "%s", token);
     snprintf(_tlg_api, TELEGRAM_API_LENGTH, "/bot%s", token);
     memset(_response, '\0', HTTP_MAX_RES_LENGTH);
+    memset(_json_value_str, '\0', MAX_JSON_STR_LEN);
+    memset(_json_subvalue_str, '\0', MAX_JSON_SUBVAL_STR_LEN);
+    memset(_json_elements, 0, MAX_JSON_ELEMENTS);
+    memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
     _connected = false;
     _last_received_msg = 1;
 
@@ -302,17 +306,17 @@ uint8_t uTLGBot::getUpdates(void)
 
     /* Response JSON Parse */
 
-    char json_value_str[MAX_JSON_STRING_LEN];
-	char json_subvalue_str[MAX_JSON_SUBVAL_LEN];
-	jsmntok_t json_elements[MAX_JSON_ELEMENTS];
-	jsmntok_t json_subelements[MAX_JSON_SUBELEMENTS];
-	uint32_t num_elements, num_subelements;
-	uint32_t key_position;
+    uint32_t num_elements, num_subelements;
+    uint32_t key_position;
+
+    // Clear json elements objects
+    memset(_json_elements, 0, MAX_JSON_ELEMENTS);
+    memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
 
     // Parse message string as JSON and get each element
-	num_elements = json_parse_str(ptr_response, strlen(ptr_response), json_elements, 
+    num_elements = json_parse_str(ptr_response, strlen(ptr_response), _json_elements, 
         MAX_JSON_ELEMENTS);
-	if(num_elements == 0)
+    if(num_elements == 0)
     {
         _println(F("[Bot] Error: Bad JSON sintax from received response."));
 
@@ -320,271 +324,271 @@ uint8_t uTLGBot::getUpdates(void)
         if(is_connected())
             disconnect();
         
-		return 0;
+        return 0;
     }
 
     // Check and get value of key: update_id
-	key_position = json_has_key(ptr_response, json_elements, num_elements, "update_id");
-	if(key_position != 0)
-	{
-		// Get json element string
-		json_get_element_string(ptr_response, &json_elements[key_position+1], json_value_str, 
-            MAX_JSON_STRING_LEN);
+    key_position = json_has_key(ptr_response, _json_elements, num_elements, "update_id");
+    if(key_position != 0)
+    {
+        // Get json element string
+        json_get_element_string(ptr_response, &_json_elements[key_position+1], _json_value_str, 
+            MAX_JSON_STR_LEN);
 
-		// Save value in variable
-        sscanf_P(json_value_str, PSTR("%zu"), &_last_received_msg);
-		
+        // Save value in variable
+        sscanf_P(_json_value_str, PSTR("%zu"), &_last_received_msg);
+        
         // Prepare variable to next update message request (offset)
         _last_received_msg = _last_received_msg + 1;
-	}
+    }
 
     // Check and get value of key: message_id
-	key_position = json_has_key(ptr_response, json_elements, num_elements, "message_id");
-	if(key_position != 0)
-	{
-		// Get json element string
-		json_get_element_string(ptr_response, &json_elements[key_position+1], json_value_str, 
-            MAX_JSON_STRING_LEN);
+    key_position = json_has_key(ptr_response, _json_elements, num_elements, "message_id");
+    if(key_position != 0)
+    {
+        // Get json element string
+        json_get_element_string(ptr_response, &_json_elements[key_position+1], _json_value_str, 
+            MAX_JSON_STR_LEN);
 
-		// Save value in variable
-        //sscanf_P(json_value_str, PSTR(SCNd32), &received_msg.message_id); // Not compile
-        sscanf_P(json_value_str, PSTR("%d"), &received_msg.message_id);
-	}
+        // Save value in variable
+        //sscanf_P(_json_value_str, PSTR(SCNd32), &received_msg.message_id); // Not compile
+        sscanf_P(_json_value_str, PSTR("%d"), &received_msg.message_id);
+    }
 
     // Check and get value of key: date
-	key_position = json_has_key(ptr_response, json_elements, num_elements, "date");
-	if(key_position != 0)
-	{
-		// Get json element string
-		json_get_element_string(ptr_response, &json_elements[key_position+1], json_value_str, 
-            MAX_JSON_STRING_LEN);
+    key_position = json_has_key(ptr_response, _json_elements, num_elements, "date");
+    if(key_position != 0)
+    {
+        // Get json element string
+        json_get_element_string(ptr_response, &_json_elements[key_position+1], _json_value_str, 
+            MAX_JSON_STR_LEN);
 
-		// Save value in variable
-        //sscanf_P(json_value_str, PSTR(SCNu32), &received_msg.date); // Not compile
-        sscanf_P(json_value_str, PSTR("%ul"), &received_msg.date);
-	}
+        // Save value in variable
+        //sscanf_P(_json_value_str, PSTR(SCNu32), &received_msg.date); // Not compile
+        sscanf_P(_json_value_str, PSTR("%ul"), &received_msg.date);
+    }
 
     // Check and get value of key: text
-	key_position = json_has_key(ptr_response, json_elements, num_elements, "text");
-	if(key_position != 0)
-	{
-		// Get json element string
-		json_get_element_string(ptr_response, &json_elements[key_position+1], json_value_str, 
-            MAX_JSON_STRING_LEN);
+    key_position = json_has_key(ptr_response, _json_elements, num_elements, "text");
+    if(key_position != 0)
+    {
+        // Get json element string
+        json_get_element_string(ptr_response, &_json_elements[key_position+1], _json_value_str, 
+            MAX_JSON_STR_LEN);
 
-		// Save value in variable
-        snprintf_P(received_msg.text, MAX_TEXT_LENGTH, PSTR("%s"), json_value_str);
-	}
+        // Save value in variable
+        snprintf_P(received_msg.text, MAX_TEXT_LENGTH, PSTR("%s"), _json_value_str);
+    }
 
     // Check and get value of key: from
-	key_position = json_has_key(ptr_response, json_elements, num_elements, "from");
-	if(key_position != 0)
-	{
-		// Get json element string
-		json_get_element_string(ptr_response, &json_elements[key_position+1], json_value_str, 
-            MAX_JSON_STRING_LEN);
+    key_position = json_has_key(ptr_response, _json_elements, num_elements, "from");
+    if(key_position != 0)
+    {
+        // Get json element string
+        json_get_element_string(ptr_response, &_json_elements[key_position+1], _json_value_str, 
+            MAX_JSON_STR_LEN);
 
-		// Parse string "from" content as JSON and get each element
-        num_subelements = json_parse_str(json_value_str, strlen(json_value_str), json_subelements, 
+        // Parse string "from" content as JSON and get each element
+        num_subelements = json_parse_str(_json_value_str, strlen(_json_value_str), _json_subelements, 
             MAX_JSON_SUBELEMENTS);
         if(num_subelements == 0)
             _println(F("[Bot] Error: Bad JSON sintax in \"from\" element."));
         else
         {
             // Check and get value of key: id
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, "id");
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, "id");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                //sscanf_P(json_subvalue_str, PSTR(SCNd32), &received_msg.from.id); // Not compile
-                sscanf_P(json_subvalue_str, PSTR("%d"), &received_msg.from.id);
+                //sscanf_P(_json_subvalue_str, PSTR(SCNd32), &received_msg.from.id); // Not compile
+                sscanf_P(_json_subvalue_str, PSTR("%d"), &received_msg.from.id);
             }
 
             // Check and get value of key: is_bot
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "is_bot");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                if(strcmp(json_subvalue_str, "true") == 0)
+                if(strcmp(_json_subvalue_str, "true") == 0)
                     received_msg.from.is_bot = true;
                 else
                     received_msg.from.is_bot = false;
             }
 
             // Check and get value of key: first_name
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "first_name");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.from.first_name, MAX_USER_LENGTH, PSTR("%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
 
             // Check and get value of key: last_name
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "last_name");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.from.last_name, MAX_USER_LENGTH, PSTR("%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
 
             // Check and get value of key: username
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "username");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.from.username, MAX_USERNAME_LENGTH, PSTR("@%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
 
             // Check and get value of key: language_code
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "language_code");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.from.language_code, MAX_LANGUAGE_CODE_LENGTH, PSTR("%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
         }
-	}
+    }
 
     // Check and get value of key: chat
-	key_position = json_has_key(ptr_response, json_elements, num_elements, "chat");
-	if(key_position != 0)
-	{
+    key_position = json_has_key(ptr_response, _json_elements, num_elements, "chat");
+    if(key_position != 0)
+    {
         printf("Chat key located\n");
-		// Get json element string
-		json_get_element_string(ptr_response, &json_elements[key_position+1], json_value_str, 
-            MAX_JSON_STRING_LEN);
+        // Get json element string
+        json_get_element_string(ptr_response, &_json_elements[key_position+1], _json_value_str, 
+            MAX_JSON_STR_LEN);
 
-		// Parse string "from" content as JSON and get each element
-        num_subelements = json_parse_str(json_value_str, strlen(json_value_str), json_subelements, 
+        // Parse string "from" content as JSON and get each element
+        num_subelements = json_parse_str(_json_value_str, strlen(_json_value_str), _json_subelements, 
             MAX_JSON_ELEMENTS);
         if(num_subelements == 0)
             _println(F("[Bot] Error: Bad JSON sintax in \"from\" element."));
         else
         {
             // Check and get value of key: id
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, "id");
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, "id");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                sscanf_P(json_subvalue_str, PSTR("%d"), &received_msg.chat.id);
+                sscanf_P(_json_subvalue_str, PSTR("%d"), &received_msg.chat.id);
             }
 
             // Check and get value of key: type
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, "type");
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, "type");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.chat.type, MAX_CHAT_TYPE_LENGTH, PSTR("%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
 
             // Check and get value of key: title
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, "title");
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, "title");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.chat.title, MAX_CHAT_TITLE_LENGTH, PSTR("%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
 
             // Check and get value of key: username
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "username");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.chat.username, MAX_USERNAME_LENGTH, PSTR("%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
 
             // Check and get value of key: first_name
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "first_name");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.chat.first_name, MAX_USER_LENGTH, PSTR("%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
 
             // Check and get value of key: last_name
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "last_name");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
                 snprintf_P(received_msg.chat.last_name, MAX_USER_LENGTH, PSTR("%s"), 
-                    json_subvalue_str);
+                    _json_subvalue_str);
             }
 
             // Check and get value of key: is_bot
-            key_position = json_has_key(json_value_str, json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
                 "all_members_are_administrators");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(json_value_str, &json_subelements[key_position+1], 
-                    json_subvalue_str, MAX_JSON_SUBVAL_LEN);
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                    _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                if(strcmp(json_subvalue_str, "true") == 0)
+                if(strcmp(_json_subvalue_str, "true") == 0)
                     received_msg.chat.all_members_are_administrators = true;
                 else
                     received_msg.chat.all_members_are_administrators = false;

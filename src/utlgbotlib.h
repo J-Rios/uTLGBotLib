@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 19 apr. 2019
+// Last modified date: 21 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -11,11 +11,6 @@
 
 #ifndef UTLGBOTLIB_H_
 #define UTLGBOTLIB_H_
-
-/**************************************************************************************************/
-
-/* Defines & Macros */
-
 
 /**************************************************************************************************/
 
@@ -67,8 +62,8 @@
 #define TLG_LONG_POLL 10
 
 // JSON Max values length
-#define MAX_JSON_STRING_LEN 1024
-#define MAX_JSON_SUBVAL_LEN 512
+#define MAX_JSON_STR_LEN 1024
+#define MAX_JSON_SUBVAL_STR_LEN 512
 #define MAX_JSON_ELEMENTS 128
 #define MAX_JSON_SUBELEMENTS 64
 
@@ -166,6 +161,10 @@ class uTLGBot
         char _token[TOKEN_LENGTH];
         char _tlg_api[TELEGRAM_API_LENGTH];
         char _response[HTTP_MAX_RES_LENGTH];
+        jsmntok_t _json_elements[MAX_JSON_ELEMENTS];
+        jsmntok_t _json_subelements[MAX_JSON_SUBELEMENTS];
+        char _json_value_str[MAX_JSON_STR_LEN];
+        char _json_subvalue_str[MAX_JSON_SUBVAL_STR_LEN];
         bool _connected;
         size_t _last_received_msg;
 
