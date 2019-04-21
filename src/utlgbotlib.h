@@ -94,7 +94,7 @@
 // User: https://core.telegram.org/bots/api#user
 typedef struct tlg_type_user
 {
-    int32_t id;
+    int64_t id;
     bool is_bot;
     char first_name[MAX_USER_LENGTH];
     char last_name[MAX_USER_LENGTH];
@@ -105,7 +105,7 @@ typedef struct tlg_type_user
 // Chat: https://core.telegram.org/bots/api#chat
 typedef struct tlg_type_chat
 {
-    int32_t id;
+    int64_t id;
     char type[MAX_CHAT_TYPE_LENGTH];
     char title[MAX_CHAT_TITLE_LENGTH];
     char username[MAX_USERNAME_LENGTH];
@@ -123,7 +123,7 @@ typedef struct tlg_type_chat
 // Message: https://core.telegram.org/bots/api#message
 typedef struct tlg_type_message
 {
-    int32_t message_id;
+    int64_t message_id;
     tlg_type_user from;
     uint32_t date;
     tlg_type_chat chat;

@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 19 apr. 2019
+// Last modified date: 21 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -351,8 +351,8 @@ uint8_t uTLGBot::getUpdates(void)
             MAX_JSON_STR_LEN);
 
         // Save value in variable
-        //sscanf_P(_json_value_str, PSTR(SCNd32), &received_msg.message_id); // Not compile
-        sscanf_P(_json_value_str, PSTR("%d"), &received_msg.message_id);
+        //sscanf_P(_json_value_str, PSTR(SCNd64), &received_msg.message_id); // Not compile
+        sscanf_P(_json_value_str, PSTR("%lld"), &received_msg.message_id);
     }
 
     // Check and get value of key: date
@@ -404,8 +404,8 @@ uint8_t uTLGBot::getUpdates(void)
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                //sscanf_P(_json_subvalue_str, PSTR(SCNd32), &received_msg.from.id); // Not compile
-                sscanf_P(_json_subvalue_str, PSTR("%d"), &received_msg.from.id);
+                //sscanf_P(_json_subvalue_str, PSTR(SCNd64), &received_msg.from.id); // Not compile
+                sscanf_P(_json_subvalue_str, PSTR("%lld"), &received_msg.from.id);
             }
 
             // Check and get value of key: is_bot
@@ -486,7 +486,6 @@ uint8_t uTLGBot::getUpdates(void)
     key_position = json_has_key(ptr_response, _json_elements, num_elements, "chat");
     if(key_position != 0)
     {
-        printf("Chat key located\n");
         // Get json element string
         json_get_element_string(ptr_response, &_json_elements[key_position+1], _json_value_str, 
             MAX_JSON_STR_LEN);
@@ -507,7 +506,8 @@ uint8_t uTLGBot::getUpdates(void)
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                sscanf_P(_json_subvalue_str, PSTR("%d"), &received_msg.chat.id);
+                //sscanf_P(_json_subvalue_str, PSTR(SCNd64), &received_msg.chat.id); // Not compile
+                sscanf_P(_json_subvalue_str, PSTR("%lld"), &received_msg.chat.id);
             }
 
             // Check and get value of key: type
