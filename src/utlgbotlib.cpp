@@ -893,9 +893,13 @@ uint8_t uTLGBot::https_client_get(const char* uri, const char* host, char* respo
                "\r\n\r\n"), uri, host);
 
     // Send request
+#ifdef ARDUINO
     _print(F("HTTP request to send: "));
     _println(request);
     _println();
+#else
+    _printf(F("HTTP request to send: %s\n"), request);
+#endif
     if(https_client_write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -956,9 +960,13 @@ uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char
                host, body_len, body);
 
     // Send request
+#ifdef ARDUINO
     _print(F("HTTP request to send: "));
     _println(request);
     _println();
+#else
+    _printf(F("HTTP request to send: %s\n"), request);
+#endif
     if(https_client_write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -1038,9 +1046,13 @@ uint32_t uTLGBot::json_parse_str(const char* json_str, const size_t json_str_len
     num_elements = jsmn_parse(&json_parser, json_str, json_str_len, json_tokens, json_tokens_len);
     if(num_elements < 0)
     {
+#ifdef ARDUINO
         _print(F("Can't parse JSON data. Code "));
         _println(num_elements);
         _println();
+#else
+        _printf(F("Can't parse JSON data. Code %d\n"), num_elements);
+#endif
         return 0;
     }
     if((num_elements == 0) || (json_tokens[0].type != JSMN_OBJECT))
