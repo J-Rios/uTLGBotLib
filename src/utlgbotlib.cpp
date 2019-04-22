@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 21 apr. 2019
+// Last modified date: 22 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -16,15 +16,17 @@
 
 /* Macros */
 
-#ifdef ARDUINO
+#if defined(ARDUINO) // ESP32 Arduino Framework
     #define _print(x) do { Serial.print(x); } while(0)
     #define _println(x) do { Serial.println(x); } while(0)
     #define _printf(...) do { Serial.printf(__VA_ARGS__); } while(0)
     #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
 
+    #define _millis_setup() 
     #define _millis() millis()
     #define _delay(x) do { delay(x); } while(0)
-#else /* ESP-IDF */
+#elif defined(IDF_VER) // ESP32 ESPIDF Framework
+    #define _millis_setup() 
     #define _millis() (unsigned long)(esp_timer_get_time()/1000)
     #define _print(x) do { printf(x); } while(0)
     #define _println(x) do { printf(x); printf("\n"); } while(0)
@@ -36,7 +38,30 @@
     #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
     
     #define _delay(x) do { vTaskDelay(x/portTICK_PERIOD_MS); } while(0)
+    #define PROGMEM 
+#else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+
+    #ifdef _WIN32 // Windows
+        #define delay(x) do { Sleep(x); } while(0)
+    #else // Linux
+        #define delay(x) do { usleep(x*1000); } while(0)
+    #endif
+
+    #define _millis() (unsigned long)((clock() - ::_millis_t0)*1000.0/CLOCKS_PER_SEC)
+    #define _print(x) do { printf(x); } while(0)
+    #define _println(x) do { printf(x); printf("\n"); } while(0)
+    #define _printf(...) do { printf(__VA_ARGS__); } while(0)
+
+    #define F(x) x
+    #define PSTR(x) x
+    #define snprintf_P(...) do { snprintf(__VA_ARGS__); } while(0)
+    #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
+
     #define PROGMEM
+
+    // Initialize millis (just usefull for Generic)
+    clock_t _millis_t0 = clock();
+
 #endif
 
 /**************************************************************************************************/
@@ -753,10 +778,10 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
 // Initialize HTTPS client
 void uTLGBot::https_client_init(void)
 {
-    #ifdef ARDUINO
+    #if defined(ARDUINO) // ESP32 Arduino Framework
         _client = new WiFiClientSecure();
         //_client->setCACert(cert_https_api_telegram_org);
-    #else /* ESP-IDF */
+    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         _tls = NULL;
         /*_tls_cfg.cacert_pem_buf = server_root_cert_pem_start;
         _tls_cfg.cacert_pem_bytes = server_root_cert_pem_end - server_root_cert_pem_start;*/
@@ -770,15 +795,17 @@ void uTLGBot::https_client_init(void)
             .non_block = false,
         };
         _tls_cfg = &tls_cfg;
+    #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+        printf("TO-DO");
     #endif
 }
 
 // Make HTTPS client connection to server
 bool uTLGBot::https_client_connect(const char* host, int port)
 {
-    #ifdef ARDUINO
+    #if defined(ARDUINO) // ESP32 Arduino Framework
         return _client->connect(host, port);
-    #else /* ESP-IDF */
+    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         _tls = esp_tls_conn_new(host, strlen(host), port, _tls_cfg);
         if(_tls == NULL)
             _connected = false;
@@ -791,9 +818,9 @@ bool uTLGBot::https_client_connect(const char* host, int port)
 // HTTPS client disconnect from server
 void uTLGBot::https_client_disconnect(void)
 {
-    #ifdef ARDUINO
+    #if defined(ARDUINO) // ESP32 Arduino Framework
         _client->stop();
-    #else
+    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         if(_tls != NULL)
             esp_tls_conn_delete(_tls);
         _connected = false;
@@ -803,9 +830,9 @@ void uTLGBot::https_client_disconnect(void)
 // Check if HTTPS client is connected
 bool uTLGBot::https_client_is_connected(void)
 {
-    #ifdef ARDUINO
+    #if defined(ARDUINO) // ESP32 Arduino Framework
         return _client->connected();
-    #else /* ESP-IDF */
+    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         // Note: ESP-IDF 3.1 doesn't has connection state in ESP-TLS
         /*if(_tls != NULL)
         {
@@ -819,9 +846,9 @@ bool uTLGBot::https_client_is_connected(void)
 
 size_t uTLGBot::https_client_write(const char* request)
 {
-    #ifdef ARDUINO
+    #if defined(ARDUINO) // ESP32 Arduino Framework
         return _client->print(request);
-    #else /* ESP-IDF */
+    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         size_t written_bytes = 0;
         int ret;
         
@@ -843,7 +870,7 @@ size_t uTLGBot::https_client_write(const char* request)
 
 bool uTLGBot::https_client_read(char* response, const size_t response_len)
 {
-    #ifdef ARDUINO
+    #if defined(ARDUINO) // ESP32 Arduino Framework
         char c;
         size_t i = 0;
 
@@ -859,7 +886,7 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
             }
         }
         return true;
-    #else /* ESP-IDF */
+    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         int ret;
 
         ret = esp_tls_conn_read(_tls, response, response_len);
@@ -893,7 +920,7 @@ uint8_t uTLGBot::https_client_get(const char* uri, const char* host, char* respo
                "\r\n\r\n"), uri, host);
 
     // Send request
-#ifdef ARDUINO
+#if defined(ARDUINO) // ESP32 Arduino Framework
     _print(F("HTTP request to send: "));
     _println(request);
     _println();
@@ -960,7 +987,7 @@ uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char
                host, body_len, body);
 
     // Send request
-#ifdef ARDUINO
+#if defined(ARDUINO) // ESP32 Arduino Framework
     _print(F("HTTP request to send: "));
     _println(request);
     _println();
@@ -1046,7 +1073,7 @@ uint32_t uTLGBot::json_parse_str(const char* json_str, const size_t json_str_len
     num_elements = jsmn_parse(&json_parser, json_str, json_str_len, json_tokens, json_tokens_len);
     if(num_elements < 0)
     {
-#ifdef ARDUINO
+#if defined(ARDUINO) // ESP32 Arduino Framework
         _print(F("Can't parse JSON data. Code "));
         _println(num_elements);
         _println();

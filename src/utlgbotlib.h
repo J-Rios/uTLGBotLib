@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 21 apr. 2019
+// Last modified date: 22 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -16,14 +16,20 @@
 
 /* Libraries */
 
-#ifdef ARDUINO
+#if defined(ARDUINO) // ESP32 Arduino Framework
     #include <Arduino.h>
     #include <WiFiClientSecure.h>
-#else /* ESP-IDF */
+#elif defined(IDF_VER) // ESP32 ESPIDF Framework
     #include "esp_tls.h"
+#else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+    #include <stdio.h>
+    #include <string.h>
+    #include <time.h>
 #endif
 
-//#define __STDC_LIMIT_MACROS 1 // This define could be needed and must be before inttypes include
+//#define __STDC_LIMIT_MACROS // Could be needed for C++, and it must be before inttypes include
+//#define __STDC_CONSTANT_MACROS // Could be needed for C++, and it must be before inttypes include
+#define __STDC_FORMAT_MACROS  // Could be needed for C++, and it must be before inttypes include
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -139,8 +145,10 @@ typedef struct tlg_type_message
 class uTLGBot
 {
     public:
+        // Public Attributtes
         tlg_type_message received_msg;
 
+        // Public Methods
         uTLGBot(const char* token);
         uint8_t connect(void);
         void disconnect(void);
@@ -152,9 +160,10 @@ class uTLGBot
         uint8_t getUpdates(void);
 
     private:
-        #ifdef ARDUINO
+        // Private Attributtes
+        #if defined(ARDUINO) // ESP32 Arduino Framework
             WiFiClientSecure* _client;
-        #else /* ESP-IDF */
+        #elif defined(IDF_VER) // ESP32 ESPIDF Framework
             esp_tls_cfg_t* _tls_cfg;
             struct esp_tls* _tls;
         #endif
@@ -168,12 +177,14 @@ class uTLGBot
         bool _connected;
         size_t _last_received_msg;
 
+        // Private Methods - High
         uint8_t tlg_get(const char* command, char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
         uint8_t tlg_post(const char* command, const char* body, const size_t body_len, 
             char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
-
+        
+        // Private Methods - Low (HAL specifics)
         void https_client_init(void);
         bool https_client_connect(const char* host, int port);
         void https_client_disconnect(void);
@@ -187,6 +198,7 @@ class uTLGBot
             const uint64_t body_len, char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
+        // Private Methods - Auxiliar Functions
         void clear_msg_data(void);
         uint32_t json_parse_str(const char* json_str, const size_t json_str_len, 
             jsmntok_t* json_tokens, const uint32_t json_tokens_len);

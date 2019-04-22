@@ -9,8 +9,10 @@
 
 /* Multiples Devices Build Support */
 
-#ifdef ARDUINO
+#if defined(ARDUINO) // ESP32 Arduino Framework
     #include "main_arduino.h"
-#else
+#elif defined(IDF_VER) // ESP32 ESPIDF Framework
     #include "main_esp32.h"
+#else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+    #include "main_generic.h"
 #endif
