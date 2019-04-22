@@ -23,15 +23,15 @@
     #include "esp_tls.h"
 #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
     #include <stdio.h>
-    #include <string.h>
     #include <time.h>
 #endif
 
 //#define __STDC_LIMIT_MACROS // Could be needed for C++, and it must be before inttypes include
 //#define __STDC_CONSTANT_MACROS // Could be needed for C++, and it must be before inttypes include
-#define __STDC_FORMAT_MACROS  // Could be needed for C++, and it must be before inttypes include
+//#define __STDC_FORMAT_MACROS  // Could be needed for C++, and it must be before inttypes include
 #include <inttypes.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "jsmn.h"
 
@@ -164,8 +164,8 @@ class uTLGBot
         #if defined(ARDUINO) // ESP32 Arduino Framework
             WiFiClientSecure* _client;
         #elif defined(IDF_VER) // ESP32 ESPIDF Framework
-            esp_tls_cfg_t* _tls_cfg;
             struct esp_tls* _tls;
+            esp_tls_cfg_t* _tls_cfg;
         #endif
         char _token[TOKEN_LENGTH];
         char _tlg_api[TELEGRAM_API_LENGTH];

@@ -24,7 +24,6 @@
 
     #define _millis_setup() 
     #define _millis() millis()
-    #define _delay(x) do { delay(x); } while(0)
 #elif defined(IDF_VER) // ESP32 ESPIDF Framework
     #define _millis_setup() 
     #define _millis() (unsigned long)(esp_timer_get_time()/1000)
@@ -37,17 +36,8 @@
     #define snprintf_P(...) do { snprintf(__VA_ARGS__); } while(0)
     #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
     
-    #define _delay(x) do { vTaskDelay(x/portTICK_PERIOD_MS); } while(0)
     #define PROGMEM 
 #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-
-    #ifdef _WIN32 // Windows
-        #define delay(x) do { Sleep(x); } while(0)
-    #else // Linux
-        #define delay(x) do { usleep(x*1000); } while(0)
-    #endif
-
-    #define _millis() (unsigned long)((clock() - ::_millis_t0)*1000.0/CLOCKS_PER_SEC)
     #define _print(x) do { printf(x); } while(0)
     #define _println(x) do { printf(x); printf("\n"); } while(0)
     #define _printf(...) do { printf(__VA_ARGS__); } while(0)
@@ -61,7 +51,7 @@
 
     // Initialize millis (just usefull for Generic)
     clock_t _millis_t0 = clock();
-
+    #define _millis() (unsigned long)((clock() - ::_millis_t0)*1000.0/CLOCKS_PER_SEC)
 #endif
 
 /**************************************************************************************************/
@@ -783,17 +773,11 @@ void uTLGBot::https_client_init(void)
         //_client->setCACert(cert_https_api_telegram_org);
     #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         _tls = NULL;
-        /*_tls_cfg.cacert_pem_buf = server_root_cert_pem_start;
-        _tls_cfg.cacert_pem_bytes = server_root_cert_pem_end - server_root_cert_pem_start;*/
-        /*_tls_cfg.cacert_pem_buf = cert_https_api_telegram_org;
-        _tls_cfg.cacert_pem_bytes = strlen((char*)cert_https_api_telegram_org);*/
-        unsigned int cert_size = tlg_api_ca_pem_end - tlg_api_ca_pem_start;
-        static esp_tls_cfg_t tls_cfg = {
-            .alpn_protos = NULL,
-            .cacert_pem_buf = tlg_api_ca_pem_start,
-            .cacert_pem_bytes = cert_size,
-            .non_block = false,
-        };
+        static esp_tls_cfg_t tls_cfg;
+        tls_cfg.alpn_protos = NULL;
+        tls_cfg.cacert_pem_buf = tlg_api_ca_pem_start,
+        tls_cfg.cacert_pem_bytes = tlg_api_ca_pem_end - tlg_api_ca_pem_start,
+        tls_cfg.non_block = false,
         _tls_cfg = &tls_cfg;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
         printf("TO-DO");
