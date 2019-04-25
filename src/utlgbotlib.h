@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 22 apr. 2019
+// Last modified date: 25 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -28,7 +28,7 @@
 
 //#define __STDC_LIMIT_MACROS // Could be needed for C++, and it must be before inttypes include
 //#define __STDC_CONSTANT_MACROS // Could be needed for C++, and it must be before inttypes include
-//#define __STDC_FORMAT_MACROS  // Could be needed for C++, and it must be before inttypes include
+#define __STDC_FORMAT_MACROS  // Could be needed for C++, and it must be before inttypes include
 #include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
@@ -53,6 +53,9 @@
 
 // Telegram HTTPS Server Port
 #define HTTPS_PORT 443
+
+// HTTP TLS connection timeout (ms)
+#define HTTP_CONNECT_TIMEOUT 5000
 
 // HTTP response wait timeout (ms)
 #define HTTP_WAIT_RESPONSE_TIMEOUT 3000
@@ -174,7 +177,6 @@ class uTLGBot
         jsmntok_t _json_subelements[MAX_JSON_SUBELEMENTS];
         char _json_value_str[MAX_JSON_STR_LEN];
         char _json_subvalue_str[MAX_JSON_SUBVAL_STR_LEN];
-        bool _connected;
         size_t _last_received_msg;
 
         // Private Methods - High

@@ -3,7 +3,7 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 22 apr. 2019
+// Last modified date: 25 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -98,7 +98,7 @@ void app_main(void)
             printf("-----------------------------------------\n");
             printf("Received message.\n");
 
-            //printf("  From chat ID: %d\n", Bot.received_msg.chat.id);
+            printf("  From chat ID: %" PRIi64 "\n", Bot.received_msg.chat.id);
             printf("  From chat type: %s\n", Bot.received_msg.chat.type);
             printf("  From chat alias: %s\n", Bot.received_msg.chat.username);
             printf("  From chat name: %s %s\n", Bot.received_msg.chat.first_name, 
@@ -109,7 +109,7 @@ void app_main(void)
             else
                 printf("  From chat where not all members are admins.\n");
             
-            //printf("  From user ID: %d\n", Bot.received_msg.from.id);
+            printf("  From user ID: %" PRIi64 "\n", Bot.received_msg.from.id);
             printf("  From user alias: %s\n", Bot.received_msg.from.username);
             printf("  From user name: %s %s\n", Bot.received_msg.from.first_name, 
                 Bot.received_msg.from.last_name);
@@ -119,8 +119,8 @@ void app_main(void)
             else
                 printf("  From user that is not a Bot.\n");
             
-            //printf("  Message ID: %d\n", Bot.received_msg.message_id);
-            printf("  Message sent date (UNIX epoch time): %ul\n", Bot.received_msg.date);
+            printf("  Message ID: %" PRIi64 "\n", Bot.received_msg.message_id);
+            printf("  Message sent date (UNIX epoch time): %" PRIi32 "\n", Bot.received_msg.date);
             printf("  Text: %s\n", Bot.received_msg.text);
             printf("-----------------------------------------\n");
         }

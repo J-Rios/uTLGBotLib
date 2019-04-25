@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 22 apr. 2019
+// Last modified date: 25 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -24,9 +24,11 @@
 
     #define _millis_setup() 
     #define _millis() millis()
+    #define _delay(x) delay(x)
 #elif defined(IDF_VER) // ESP32 ESPIDF Framework
     #define _millis_setup() 
     #define _millis() (unsigned long)(esp_timer_get_time()/1000)
+    #define _delay(x) do { vTaskDelay(x/portTICK_PERIOD_MS); } while(0)
     #define _print(x) do { printf(x); } while(0)
     #define _println(x) do { printf(x); printf("\n"); } while(0)
     #define _printf(...) do { printf(__VA_ARGS__); } while(0)
@@ -70,7 +72,6 @@ uTLGBot::uTLGBot(const char* token)
     memset(_json_subvalue_str, '\0', MAX_JSON_SUBVAL_STR_LEN);
     memset(_json_elements, 0, MAX_JSON_ELEMENTS);
     memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
-    _connected = false;
     _last_received_msg = 1;
 
     // Clear message data
@@ -113,7 +114,6 @@ void uTLGBot::disconnect(void)
         _println(F("[Bot] Already disconnected from server."));
         return;
     }
-
     https_client_disconnect();
 
     _println(F("[Bot] Successfully disconnected."));
@@ -366,8 +366,7 @@ uint8_t uTLGBot::getUpdates(void)
             MAX_JSON_STR_LEN);
 
         // Save value in variable
-        //sscanf_P(_json_value_str, PSTR(SCNd64), &received_msg.message_id); // Not compile
-        sscanf_P(_json_value_str, PSTR("%lld"), &received_msg.message_id);
+        sscanf_P(_json_value_str, PSTR("%" SCNd64), &received_msg.message_id); // Not compile
     }
 
     // Check and get value of key: date
@@ -379,8 +378,7 @@ uint8_t uTLGBot::getUpdates(void)
             MAX_JSON_STR_LEN);
 
         // Save value in variable
-        //sscanf_P(_json_value_str, PSTR(SCNu32), &received_msg.date); // Not compile
-        sscanf_P(_json_value_str, PSTR("%ul"), &received_msg.date);
+        sscanf_P(_json_value_str, PSTR("%" SCNu32), &received_msg.date); // Not compile
     }
 
     // Check and get value of key: text
@@ -419,8 +417,7 @@ uint8_t uTLGBot::getUpdates(void)
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                //sscanf_P(_json_subvalue_str, PSTR(SCNd64), &received_msg.from.id); // Not compile
-                sscanf_P(_json_subvalue_str, PSTR("%lld"), &received_msg.from.id);
+                sscanf_P(_json_subvalue_str, PSTR("%" SCNd64), &received_msg.from.id); // Not compile
             }
 
             // Check and get value of key: is_bot
@@ -521,8 +518,7 @@ uint8_t uTLGBot::getUpdates(void)
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                //sscanf_P(_json_subvalue_str, PSTR(SCNd64), &received_msg.chat.id); // Not compile
-                sscanf_P(_json_subvalue_str, PSTR("%lld"), &received_msg.chat.id);
+                sscanf_P(_json_subvalue_str, PSTR("%" SCNd64), &received_msg.chat.id); // Not compile
             }
 
             // Check and get value of key: type
@@ -777,10 +773,10 @@ void uTLGBot::https_client_init(void)
         tls_cfg.alpn_protos = NULL;
         tls_cfg.cacert_pem_buf = tlg_api_ca_pem_start,
         tls_cfg.cacert_pem_bytes = tlg_api_ca_pem_end - tlg_api_ca_pem_start,
-        tls_cfg.non_block = false,
+        tls_cfg.non_block = true,
         _tls_cfg = &tls_cfg;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-        printf("TO-DO");
+        _println("TO-DO");
     #endif
 }
 
@@ -790,12 +786,56 @@ bool uTLGBot::https_client_connect(const char* host, int port)
     #if defined(ARDUINO) // ESP32 Arduino Framework
         return _client->connect(host, port);
     #elif defined(IDF_VER) // ESP32 ESPIDF Framework
-        _tls = esp_tls_conn_new(host, strlen(host), port, _tls_cfg);
-        if(_tls == NULL)
-            _connected = false;
-        else
-            _connected = true;
-        return _connected;
+        unsigned long t0, t1;
+        int conn_status;
+
+        // Reserve memory for TLS (Warning, here we are dynamically reserving some memory in HEAP)
+        _tls = (esp_tls*)calloc(1, sizeof(esp_tls_t));
+        if(!_tls)
+        {
+            _println(F("[HTTPS] Error: Cannot reserve memory for TLS."));
+            return false;
+        }
+
+        t0 = _millis();
+        conn_status = 0;
+        while(conn_status == 0)
+        {
+            t1 = _millis();
+
+            // Check for overflow
+            // Note: Due Arduino millis() return an unsigned long instead specific size type, lets just 
+            // handle overflow by reseting counter (this time the timeout can be < 2*expected_timeout)
+            if(t1 < t0)
+            {
+                t0 = 0;
+                continue;
+            }
+
+            // Check for timeout
+            if(t1-t0 >= HTTP_CONNECT_TIMEOUT)
+            {
+                _println(F("[HTTPS] Error: Can't connect to server (connection timeout)."));
+                break;
+            }
+
+            // Check connection
+            conn_status = esp_tls_conn_new_async(host, strlen(host), port, _tls_cfg, _tls);
+            if(conn_status == 0) // Connection in progress
+                continue;
+            else if(conn_status == -1) // Connection Fail
+            {
+                _println(F("[HTTPS] Error: Can't connect to server (connection fail)."));
+                break;
+            }
+            else if(conn_status == 1) // Connection Success
+                break;
+
+            // Release CPU usage
+            _delay(10);
+        }
+
+        return https_client_is_connected();
     #endif
 }
 
@@ -806,8 +846,10 @@ void uTLGBot::https_client_disconnect(void)
         _client->stop();
     #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         if(_tls != NULL)
+        {
             esp_tls_conn_delete(_tls);
-        _connected = false;
+            _tls = NULL;
+        }
     #endif
 }
 
@@ -817,14 +859,12 @@ bool uTLGBot::https_client_is_connected(void)
     #if defined(ARDUINO) // ESP32 Arduino Framework
         return _client->connected();
     #elif defined(IDF_VER) // ESP32 ESPIDF Framework
-        // Note: ESP-IDF 3.1 doesn't has connection state in ESP-TLS
-        /*if(_tls != NULL)
+        if(_tls != NULL)
         {
             if(_tls->conn_state == ESP_TLS_DONE)
                 return true;
         }
-        return false;*/
-        return _connected;
+        return false;
     #endif
 }
 
@@ -947,6 +987,9 @@ uint8_t uTLGBot::https_client_get(const char* uri, const char* host, char* respo
             _println(F("[HTTPS] Response successfully received."));
             break;
         }
+
+        // Release CPU usage
+        _delay(10);
     }
 
     //_printf(F("[HTTPS] Response: %s\n\n"), response);
@@ -1014,6 +1057,9 @@ uint8_t uTLGBot::https_client_post(const char* uri, const char* host, const char
             _println(F("[HTTPS] Response successfully received."));
             break;
         }
+
+        // Release CPU usage
+        _delay(10);
     }
 
     //_printf(F("[HTTPS] Response: %s\n\n"), response);
