@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 25 apr. 2019
+// Last modified date: 26 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -54,6 +54,12 @@
     // Initialize millis (just usefull for Generic)
     clock_t _millis_t0 = clock();
     #define _millis() (unsigned long)((clock() - ::_millis_t0)*1000.0/CLOCKS_PER_SEC)
+
+    #if defined(WIN32) || defined(_WIN32) // Windows
+        #define _delay(x) do { Sleep(x); } while(0)
+    #elif defined(__linux__)
+        #define _delay(x) do { usleep(x*1000); } while(0)
+    #endif
 #endif
 
 /**************************************************************************************************/

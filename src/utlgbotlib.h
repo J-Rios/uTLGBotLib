@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 25 apr. 2019
+// Last modified date: 26 apr. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -11,6 +11,15 @@
 
 #ifndef UTLGBOTLIB_H_
 #define UTLGBOTLIB_H_
+
+/**************************************************************************************************/
+
+/* Check Build System */
+
+#if !defined(ESPIDF) && !defined(ARDUINO) && !defined(WIN32) && !defined(_WIN32) && \
+    !defined(__linux__)
+    #error Unsupported system (Supported: Windows, Linux and ESP32)
+#endif
 
 /**************************************************************************************************/
 
@@ -22,8 +31,19 @@
 #elif defined(IDF_VER) // ESP32 ESPIDF Framework
     #include "esp_tls.h"
 #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+    #if defined(WIN32) || defined(_WIN32) // Windows
+        #include <windows.h>
+    #endif
     #include <stdio.h>
     #include <time.h>
+    #include <unistd.h>
+
+    // MBEDTLS library
+    #include "mbedtls/net.h"
+    #include "mbedtls/ssl.h"
+    #include "mbedtls/entropy.h"
+    #include "mbedtls/ctr_drbg.h"
+    #include "mbedtls/debug.h"
 #endif
 
 //#define __STDC_LIMIT_MACROS // Could be needed for C++, and it must be before inttypes include
