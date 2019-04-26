@@ -43,7 +43,9 @@
     #include "mbedtls/ssl.h"
     #include "mbedtls/entropy.h"
     #include "mbedtls/ctr_drbg.h"
+    #include "mbedtls/certs.h"
     #include "mbedtls/debug.h"
+    #include "mbedtls/error.h"
 #endif
 
 //#define __STDC_LIMIT_MACROS // Could be needed for C++, and it must be before inttypes include
@@ -173,6 +175,9 @@ class uTLGBot
 
         // Public Methods
         uTLGBot(const char* token);
+        #if !defined(ARDUINO) && !defined(ESPIDF) // Windows or Linux
+            ~uTLGBot(void);
+        #endif
         uint8_t connect(void);
         void disconnect(void);
         bool is_connected(void);
@@ -189,6 +194,13 @@ class uTLGBot
         #elif defined(IDF_VER) // ESP32 ESPIDF Framework
             struct esp_tls* _tls;
             esp_tls_cfg_t* _tls_cfg;
+        #else // Windows and Linux
+            mbedtls_net_context _server_fd;
+            mbedtls_entropy_context _entropy;
+            mbedtls_ctr_drbg_context _ctr_drbg;
+            mbedtls_ssl_context _tls;
+            mbedtls_ssl_config _tls_cfg;
+            mbedtls_x509_crt _cacert;
         #endif
         char _token[TOKEN_LENGTH];
         char _tlg_api[TELEGRAM_API_LENGTH];
@@ -207,8 +219,8 @@ class uTLGBot
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
         
         // Private Methods - Low (HAL specifics)
-        void https_client_init(void);
-        bool https_client_connect(const char* host, int port);
+        bool https_client_init(void);
+        int8_t https_client_connect(const char* host, int port);
         void https_client_disconnect(void);
         bool https_client_is_connected(void);
         size_t https_client_write(const char* request);

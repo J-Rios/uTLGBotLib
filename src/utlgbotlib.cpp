@@ -64,7 +64,7 @@
 
 /**************************************************************************************************/
 
-/* Constructor */
+/* Constructor & Destructor */
 
 // TLGBot constructor, initialize and setup secure client with telegram cert and get the token
 uTLGBot::uTLGBot(const char* token)
@@ -84,6 +84,19 @@ uTLGBot::uTLGBot(const char* token)
     clear_msg_data();
 }
 
+#if !defined(ARDUINO) && !defined(ESPIDF) // Windows or Linux
+    // TLGBot destructor, free all resources
+    uTLGBot::~uTLGBot(void)
+    {
+        mbedtls_net_free(&_server_fd);
+        mbedtls_x509_crt_free(&_cacert);
+        mbedtls_ssl_free(&_tls);
+        mbedtls_ssl_config_free(&_tls_cfg);
+        mbedtls_ctr_drbg_free(&_ctr_drbg);
+        mbedtls_entropy_free(&_entropy);
+    }
+#endif
+
 /**************************************************************************************************/
 
 /* Public Methods */
@@ -99,7 +112,13 @@ uint8_t uTLGBot::connect(void)
         return true;
     }
 
-    if(!https_client_connect(TELEGRAM_HOST, HTTPS_PORT))
+    int8_t conn_res = https_client_connect(TELEGRAM_HOST, HTTPS_PORT);
+    if(conn_res == -1)
+    {
+        // Force disconnect if connection result is -1 (Unexpected Server certificate)
+        disconnect();
+    }
+    if(conn_res != 1)
     {
         _println(F("[Bot] Conection fail."));
         return false;
@@ -768,7 +787,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
 /* Private Methods - HAL functions (Implement network functionality for differents devices) */
 
 // Initialize HTTPS client
-void uTLGBot::https_client_init(void)
+bool uTLGBot::https_client_init(void)
 {
     #if defined(ARDUINO) // ESP32 Arduino Framework
         _client = new WiFiClientSecure();
@@ -782,12 +801,40 @@ void uTLGBot::https_client_init(void)
         tls_cfg.non_block = true,
         _tls_cfg = &tls_cfg;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-        _println("TO-DO");
+        static const char* entropy_generation_key = "tsl_client\0";
+        int ret = 1;
+
+        // Initialization
+        mbedtls_net_init(&_server_fd);
+        mbedtls_ssl_init(&_tls);
+        mbedtls_ssl_config_init(&_tls_cfg);
+        mbedtls_x509_crt_init(&_cacert);
+        mbedtls_ctr_drbg_init(&_ctr_drbg);
+        mbedtls_entropy_init(&_entropy);
+        if((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg, mbedtls_entropy_func, &_entropy, 
+            (const unsigned char*)entropy_generation_key, strlen(entropy_generation_key))) != 0)
+        {
+            printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
+            printf("mbedtls_ctr_drbg_seed returned %d\n", ret);
+            return false;
+        }
+
+        // Load Certificate
+        ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)mbedtls_test_cas_pem,
+            mbedtls_test_cas_pem_len );
+        if( ret < 0 )
+        {
+            printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
+            printf( "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
+            return false;
+        }
     #endif
+
+    return true;
 }
 
 // Make HTTPS client connection to server
-bool uTLGBot::https_client_connect(const char* host, int port)
+int8_t uTLGBot::https_client_connect(const char* host, int port)
 {
     #if defined(ARDUINO) // ESP32 Arduino Framework
         return _client->connect(host, port);
@@ -842,6 +889,71 @@ bool uTLGBot::https_client_connect(const char* host, int port)
         }
 
         return https_client_is_connected();
+    #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+        int ret;
+
+        // Start connection
+        char str_port[6];
+        snprintf(str_port, 6, "%d", port);
+        if((ret = mbedtls_net_connect(&_server_fd, host, str_port, MBEDTLS_NET_PROTO_TCP)) != 0)
+        {
+            _printf("[HTTPS] Error: Can't connect to server. ");
+            _printf("Start connection fail (mbedtls_net_connect returned %d).\n", ret);
+            return 0;
+        }
+
+        // Set SSL/TLS configuration
+        if((ret = mbedtls_ssl_config_defaults(&_tls_cfg, MBEDTLS_SSL_IS_CLIENT, 
+            MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
+        {
+            _printf("[HTTPS] Error: Can't connect to server ");
+            _printf("Default SSL/TLS configuration fail ");
+            _printf("(mbedtls_ssl_config_defaults returned %d).\n", ret);
+            return 0;
+        }
+        mbedtls_ssl_conf_authmode(&_tls_cfg, MBEDTLS_SSL_VERIFY_OPTIONAL);
+        mbedtls_ssl_conf_ca_chain(&_tls_cfg, &_cacert, NULL);
+        mbedtls_ssl_conf_rng(&_tls_cfg, mbedtls_ctr_drbg_random, &_ctr_drbg);
+        //mbedtls_ssl_conf_dbg(&_tls_cfg, my_debug, stdout);
+
+        // SSL/TLS Server, Hostname and Bio setup
+        if((ret = mbedtls_ssl_setup( &_tls, &_tls_cfg)) != 0)
+        {
+            _printf("[HTTPS] Error: Can't connect to server ");
+            _printf("SSL/TLS setup fail (mbedtls_ssl_setup returned %d).\n", ret);
+            return 0;
+        }
+        if((ret = mbedtls_ssl_set_hostname(&_tls, host)) != 0)
+        {
+            _printf("[HTTPS] Error: Can't connect to server. ");
+            _printf("Hostname setup fail (mbedtls_ssl_set_hostname returned %d).\n", ret);
+            return 0;
+        }
+        mbedtls_ssl_set_bio(&_tls, &_server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+
+        // Perform SSL/TLS Handshake
+        while((ret = mbedtls_ssl_handshake(&_tls)) != 0)
+        {
+            if((ret != MBEDTLS_ERR_SSL_WANT_READ) && (ret != MBEDTLS_ERR_SSL_WANT_WRITE))
+            {
+                _printf("[HTTPS] Error: Can't connect to server ");
+                _printf("SSL/TLS handshake fail (mbedtls_ssl_handshake returned -0x%x).\n", -ret);
+                return 0;
+            }
+        }
+
+        // Verify server certificate
+        uint32_t flags;
+        if((flags = mbedtls_ssl_get_verify_result(&_tls)) != 0)
+        {
+            char vrfy_buf[512];
+            mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "  ! ", flags);
+            _printf("[HTTPS] Warning: Invalid Server Certificate %s\n", vrfy_buf);
+            return -1;
+        }
+
+        // Connection stablished and certificate verified
+        return 1;
     #endif
 }
 
@@ -856,6 +968,8 @@ void uTLGBot::https_client_disconnect(void)
             esp_tls_conn_delete(_tls);
             _tls = NULL;
         }
+    #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+        mbedtls_ssl_close_notify(&_tls);
     #endif
 }
 
