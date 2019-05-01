@@ -1,6 +1,6 @@
 [submodule "lib/jsmn"]
 	path = lib/jsmn
 	url = https://github.com/zserge/jsmn
-[submodule "lib/mbedtls"]
-	path = lib/mbedtls
+[submodule "lib/_mbedtls/mbedtls"]
+	path = lib/_mbedtls/mbedtls
 	url = https://github.com/ARMmbed/mbedtls
