@@ -823,7 +823,7 @@ bool uTLGBot::https_client_init(void)
         // Load Certificate
         ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)cert_https_api_telegram_org,
             sizeof(cert_https_api_telegram_org));
-        if( ret < 0 )
+        if(ret < 0)
         {
             printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
             printf("mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
@@ -977,7 +977,22 @@ void uTLGBot::https_client_disconnect(void)
         }
         _connected = false;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-        mbedtls_ssl_close_notify(&_tls);
+        // Close connection
+        int ret = mbedtls_ssl_close_notify(&_tls);
+        if((ret != 0) && (ret != MBEDTLS_ERR_SSL_WANT_READ) && (ret != MBEDTLS_ERR_SSL_WANT_WRITE))
+            mbedtls_ssl_session_reset(&_tls);
+
+        // Release all mbedtls context
+        mbedtls_net_free(&_server_fd);
+        mbedtls_x509_crt_free(&_cacert);
+        mbedtls_ssl_free(&_tls);
+        mbedtls_ssl_config_free(&_tls_cfg);
+        mbedtls_ctr_drbg_free(&_ctr_drbg);
+        mbedtls_entropy_free(&_entropy);
+
+        // Initialize again the mbedtls context
+        https_client_init();
+
         _connected = false;
     #endif
 }
@@ -1083,13 +1098,21 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
 
         ret = mbedtls_ssl_read(&_tls, (unsigned char*)response, response_len);
 
+        if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
+            return false;
+
         if(ret < 0)
         {
             _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
             return false;
         }
+        if(ret == 0)
+        {
+            _printf(F("[HTTPS] Lost connection while client was reading.\n"), -ret);
+            return false;
+        }
 
-        if(ret >= 0)
+        if(ret > 0)
             return true;
         return false;
     #endif
