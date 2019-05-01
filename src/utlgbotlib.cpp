@@ -1015,7 +1015,8 @@ size_t uTLGBot::https_client_write(const char* request)
         
         do
         {
-            ret = esp_tls_conn_write(_tls, request + written_bytes, strlen(request) - written_bytes);
+            ret = esp_tls_conn_write(_tls, request + written_bytes, strlen(request) - 
+                written_bytes);
             if(ret >= 0)
                 written_bytes += ret;
             else if(ret != MBEDTLS_ERR_SSL_WANT_READ  && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
@@ -1027,8 +1028,21 @@ size_t uTLGBot::https_client_write(const char* request)
 
         return written_bytes;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-        // TODO
-        return 0;
+        size_t written_bytes = 0;
+        int ret;
+
+        written_bytes = strlen(request);
+        while((ret = mbedtls_ssl_write(&_tls, (const unsigned char*)request, written_bytes)) <= 0)
+        {
+            if((ret != MBEDTLS_ERR_SSL_WANT_READ) && (ret != MBEDTLS_ERR_SSL_WANT_WRITE))
+            {
+                _printf(F("[HTTPS] Client write error -0x%x\n"), -ret);
+                return 0;
+            }
+        }
+        written_bytes = ret;
+
+        return written_bytes;
     #endif
 }
 
@@ -1055,8 +1069,6 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
 
         ret = esp_tls_conn_read(_tls, response, response_len);
 
-        if(ret == MBEDTLS_ERR_SSL_WANT_WRITE  || ret == MBEDTLS_ERR_SSL_WANT_READ)
-            return false;
         if(ret < 0)
         {
             _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
@@ -1067,7 +1079,18 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
             return true;
         return false;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-        // TODO
+        int ret;
+
+        ret = mbedtls_ssl_read(&_tls, (unsigned char*)response, response_len);
+
+        if(ret < 0)
+        {
+            _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
+            return false;
+        }
+
+        if(ret >= 0)
+            return true;
         return false;
     #endif
 }
