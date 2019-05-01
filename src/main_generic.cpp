@@ -52,17 +52,18 @@ int main(void)
     // Main loop
     while(1)
     {
+        /*
         // Test connection and disconnection
-        printf("Connection: %d\n", Bot.is_connected());
+        /*printf("Connection: %d\n", Bot.is_connected());
         Bot.connect();
         printf("Connection: %d\n", Bot.is_connected());
         Bot.disconnect();
-        printf("Connection: %d\n", Bot.is_connected());
+        printf("Connection: %d\n", Bot.is_connected());*/
 
-        /*
         // Test Bot getMe command
         Bot.getMe();
 
+        /*
         // Test Bot sendMessage command
         Bot.sendMessage(-244141233, "Hello world");
         Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);

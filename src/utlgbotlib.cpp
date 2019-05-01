@@ -71,6 +71,7 @@ uTLGBot::uTLGBot(const char* token)
 {
     https_client_init();
     
+    _connected = false;
     snprintf(_token, TOKEN_LENGTH, "%s", token);
     snprintf(_tlg_api, TELEGRAM_API_LENGTH, "/bot%s", token);
     memset(_response, '\0', HTTP_MAX_RES_LENGTH);
@@ -820,12 +821,12 @@ bool uTLGBot::https_client_init(void)
         }
 
         // Load Certificate
-        ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)mbedtls_test_cas_pem,
-            mbedtls_test_cas_pem_len );
+        ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)cert_https_api_telegram_org,
+            sizeof(cert_https_api_telegram_org));
         if( ret < 0 )
         {
             printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
-            printf( "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
+            printf("mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
             return false;
         }
     #endif
@@ -837,7 +838,10 @@ bool uTLGBot::https_client_init(void)
 int8_t uTLGBot::https_client_connect(const char* host, int port)
 {
     #if defined(ARDUINO) // ESP32 Arduino Framework
-        return _client->connect(host, port);
+        int8_t conn_result = _client->connect(host, port);
+        if(conn_result)
+            _connected = true;
+        return conn_result;
     #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         unsigned long t0, t1;
         int conn_status;
@@ -888,7 +892,8 @@ int8_t uTLGBot::https_client_connect(const char* host, int port)
             _delay(10);
         }
 
-        return https_client_is_connected();
+        _connected = https_client_is_connected();
+        return _connected;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
         int ret;
 
@@ -953,6 +958,7 @@ int8_t uTLGBot::https_client_connect(const char* host, int port)
         }
 
         // Connection stablished and certificate verified
+        _connected = true;
         return 1;
     #endif
 }
@@ -962,14 +968,17 @@ void uTLGBot::https_client_disconnect(void)
 {
     #if defined(ARDUINO) // ESP32 Arduino Framework
         _client->stop();
+        _connected = false;
     #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         if(_tls != NULL)
         {
             esp_tls_conn_delete(_tls);
             _tls = NULL;
         }
+        _connected = false;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
         mbedtls_ssl_close_notify(&_tls);
+        _connected = false;
     #endif
 }
 
@@ -977,17 +986,22 @@ void uTLGBot::https_client_disconnect(void)
 bool uTLGBot::https_client_is_connected(void)
 {
     #if defined(ARDUINO) // ESP32 Arduino Framework
-        return _client->connected();
+        _connected = _client->connected();
+        return _connected;
     #elif defined(IDF_VER) // ESP32 ESPIDF Framework
         if(_tls != NULL)
         {
             if(_tls->conn_state == ESP_TLS_DONE)
-                return true;
+                _connected = true;
+            else
+                _connected = false;
         }
-        return false;
+        else
+            _connected = false;
+
+        return _connected;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-        // TODO
-        return false;
+        return _connected;
     #endif
 }
 
