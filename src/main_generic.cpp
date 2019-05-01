@@ -3,7 +3,7 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 26 apr. 2019
-// Last modified date: 26 apr. 2019
+// Last modified date: 01 may. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -52,7 +52,6 @@ int main(void)
     // Main loop
     while(1)
     {
-        /*
         // Test connection and disconnection
         printf("Connection: %d\n", Bot.is_connected());
         Bot.connect();
@@ -60,13 +59,13 @@ int main(void)
         Bot.disconnect();
         printf("Connection: %d\n", Bot.is_connected());
 
+        /*
         // Test Bot getMe command
         Bot.getMe();
 
         // Test Bot sendMessage command
         Bot.sendMessage(-244141233, "Hello world");
         Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
-        */
         
         // Test Bot getUpdate command and receive messages
         while(Bot.getUpdates())
@@ -99,7 +98,7 @@ int main(void)
             printf("  Message sent date (UNIX epoch time): %" PRIi32 "\n", Bot.received_msg.date);
             printf("  Text: %s\n", Bot.received_msg.text);
             printf("-----------------------------------------\n");
-        }
+        }*/
         
         // Wait 10s for next iteration
         _delay(10000);

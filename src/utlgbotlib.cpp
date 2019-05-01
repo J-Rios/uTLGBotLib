@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 26 apr. 2019
+// Last modified date: 01 may. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -948,7 +948,7 @@ int8_t uTLGBot::https_client_connect(const char* host, int port)
         {
             char vrfy_buf[512];
             mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "  ! ", flags);
-            _printf("[HTTPS] Warning: Invalid Server Certificate %s\n", vrfy_buf);
+            _printf("[HTTPS] Warning: Invalid Server Certificate.\n%s\n", vrfy_buf);
             return -1;
         }
 
@@ -985,6 +985,9 @@ bool uTLGBot::https_client_is_connected(void)
                 return true;
         }
         return false;
+    #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+        // TODO
+        return false;
     #endif
 }
 
@@ -1009,6 +1012,9 @@ size_t uTLGBot::https_client_write(const char* request)
         } while(written_bytes < strlen(request));
 
         return written_bytes;
+    #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+        // TODO
+        return 0;
     #endif
 }
 
@@ -1045,6 +1051,9 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
         
         if(ret >= 0)
             return true;
+        return false;
+    #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
+        // TODO
         return false;
     #endif
 }
