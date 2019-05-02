@@ -3,11 +3,11 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 19 apr. 2019
+// Last modified date: 02 may. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
-#ifdef ARDUINO
+#if defined(ARDUINO) // ESP32 Arduino Framework
 
 /**************************************************************************************************/
 
@@ -56,7 +56,9 @@ uTLGBot Bot(TLG_TOKEN);
 void setup(void)
 {
     Serial.begin(115200);
-    
+
+    Serial.printf("\nRunning test program in ESP32 with Arduino Framework.\n\n");
+
     // Initialize WiFi station connection
     wifi_init_stat();
 }
@@ -70,22 +72,13 @@ void loop()
         delay(100);
         return;
     }
-    
-    /*
-    // Test connection and disconnection
-    Serial.printf("Connection: %d\n", Bot.is_connected());
-    Bot.connect();
-    Serial.printf("Connection: %d\n", Bot.is_connected());
-    Bot.disconnect();
-    Serial.printf("Connection: %d\n", Bot.is_connected());
-    
+
     // Test Bot getMe command
     Bot.getMe();
 
     // Test Bot sendMessage command
     Bot.sendMessage(-244141233, "Hello world");
     Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
-    */
 
     // Test Bot getUpdate command and receive messages
     while(Bot.getUpdates())
@@ -119,7 +112,7 @@ void loop()
         Serial.printf("  Text: %s\n", Bot.received_msg.text);
         Serial.printf("-----------------------------------------\n");
     }
-    
+
     // Wait 1 min for next iteration
     delay(60000);
 }

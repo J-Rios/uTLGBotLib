@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 01 may. 2019
+// Last modified date: 02 may. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -16,8 +16,8 @@
 
 /* Check Build System */
 
-#if !defined(ESPIDF) && !defined(ARDUINO) && !defined(WIN32) && !defined(_WIN32) && \
-    !defined(__linux__)
+#if !defined(ARDUINO) && !defined(ESP_IDF) && !defined(WIN32) && !defined(_WIN32) && \
+!defined(__linux__)
     #error Unsupported system (Supported: Windows, Linux and ESP32)
 #endif
 
@@ -28,7 +28,7 @@
 #if defined(ARDUINO) // ESP32 Arduino Framework
     #include <Arduino.h>
     #include <WiFiClientSecure.h>
-#elif defined(IDF_VER) // ESP32 ESPIDF Framework
+#elif defined(ESP_IDF) // ESP32 ESPIDF Framework
     #include "esp_tls.h"
 #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
     #if defined(WIN32) || defined(_WIN32) // Windows
@@ -87,7 +87,7 @@
 #define HTTP_MAX_BODY_LENGTH 1024
 #define HTTP_MAX_GET_LENGTH HTTP_MAX_URI_LENGTH + 128
 #define HTTP_MAX_POST_LENGTH HTTP_MAX_URI_LENGTH + HTTP_MAX_BODY_LENGTH
-#define HTTP_MAX_RES_LENGTH 5121
+#define HTTP_MAX_RES_LENGTH 1024
 
 // Telegram getUpdate Long Poll value (s)
 #define TLG_LONG_POLL 10
@@ -175,7 +175,7 @@ class uTLGBot
 
         // Public Methods
         uTLGBot(const char* token);
-        #if !defined(ARDUINO) && !defined(ESPIDF) // Windows or Linux
+        #if !defined(ARDUINO) && !defined(ESP_IDF) // Windows or Linux
             ~uTLGBot(void);
         #endif
         uint8_t connect(void);
@@ -191,7 +191,7 @@ class uTLGBot
         // Private Attributtes
         #if defined(ARDUINO) // ESP32 Arduino Framework
             WiFiClientSecure* _client;
-        #elif defined(IDF_VER) // ESP32 ESPIDF Framework
+        #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
             struct esp_tls* _tls;
             esp_tls_cfg_t* _tls_cfg;
         #else // Windows and Linux

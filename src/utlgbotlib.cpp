@@ -25,12 +25,12 @@
     #define _millis_setup() 
     #define _millis() millis()
     #define _delay(x) delay(x)
-#elif defined(IDF_VER) // ESP32 ESPIDF Framework
+#elif defined(ESP_IDF) // ESP32 ESPIDF Framework
     #define _millis_setup() 
     #define _millis() (unsigned long)(esp_timer_get_time()/1000)
     #define _delay(x) do { vTaskDelay(x/portTICK_PERIOD_MS); } while(0)
-    #define _print(x) do { printf(x); } while(0)
-    #define _println(x) do { printf(x); printf("\n"); } while(0)
+    #define _print(x) do { printf("%s", x); } while(0)
+    #define _println(x) do { printf("%s", x); printf("\n"); } while(0)
     #define _printf(...) do { printf(__VA_ARGS__); } while(0)
 
     #define F(x) x
@@ -40,8 +40,8 @@
     
     #define PROGMEM 
 #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-    #define _print(x) do { printf(x); } while(0)
-    #define _println(x) do { printf(x); printf("\n"); } while(0)
+    #define _print(x) do { printf("%s", x); } while(0)
+    #define _println(x) do { printf("%s", x); printf("\n"); } while(0)
     #define _printf(...) do { printf(__VA_ARGS__); } while(0)
 
     #define F(x) x
@@ -85,7 +85,7 @@ uTLGBot::uTLGBot(const char* token)
     clear_msg_data();
 }
 
-#if !defined(ARDUINO) && !defined(ESPIDF) // Windows or Linux
+#if !defined(ARDUINO) && !defined(ESP_IDF) // Windows or Linux
     // TLGBot destructor, free all resources
     uTLGBot::~uTLGBot(void)
     {
@@ -793,7 +793,7 @@ bool uTLGBot::https_client_init(void)
     #if defined(ARDUINO) // ESP32 Arduino Framework
         _client = new WiFiClientSecure();
         //_client->setCACert(cert_https_api_telegram_org);
-    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
+    #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
         _tls = NULL;
         static esp_tls_cfg_t tls_cfg;
         tls_cfg.alpn_protos = NULL;
@@ -842,7 +842,7 @@ int8_t uTLGBot::https_client_connect(const char* host, int port)
         if(conn_result)
             _connected = true;
         return conn_result;
-    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
+    #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
         unsigned long t0, t1;
         int conn_status;
 
@@ -969,7 +969,7 @@ void uTLGBot::https_client_disconnect(void)
     #if defined(ARDUINO) // ESP32 Arduino Framework
         _client->stop();
         _connected = false;
-    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
+    #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
         if(_tls != NULL)
         {
             esp_tls_conn_delete(_tls);
@@ -1003,7 +1003,7 @@ bool uTLGBot::https_client_is_connected(void)
     #if defined(ARDUINO) // ESP32 Arduino Framework
         _connected = _client->connected();
         return _connected;
-    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
+    #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
         if(_tls != NULL)
         {
             if(_tls->conn_state == ESP_TLS_DONE)
@@ -1024,7 +1024,7 @@ size_t uTLGBot::https_client_write(const char* request)
 {
     #if defined(ARDUINO) // ESP32 Arduino Framework
         return _client->print(request);
-    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
+    #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
         size_t written_bytes = 0;
         int ret;
         
@@ -1032,7 +1032,7 @@ size_t uTLGBot::https_client_write(const char* request)
         {
             ret = esp_tls_conn_write(_tls, request + written_bytes, strlen(request) - 
                 written_bytes);
-            if(ret >= 0)
+            if(ret > 0)
                 written_bytes += ret;
             else if(ret != MBEDTLS_ERR_SSL_WANT_READ  && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
             {
@@ -1079,18 +1079,26 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
             }
         }
         return true;
-    #elif defined(IDF_VER) // ESP32 ESPIDF Framework
+    #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
         int ret;
 
         ret = esp_tls_conn_read(_tls, response, response_len);
+
+        if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
+            return false;
 
         if(ret < 0)
         {
             _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
             return false;
         }
+        if(ret == 0)
+        {
+            _printf(F("[HTTPS] Lost connection while client was reading.\n"));
+            return false;
+        }
         
-        if(ret >= 0)
+        if(ret > 0)
             return true;
         return false;
     #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
@@ -1108,7 +1116,7 @@ bool uTLGBot::https_client_read(char* response, const size_t response_len)
         }
         if(ret == 0)
         {
-            _printf(F("[HTTPS] Lost connection while client was reading.\n"), -ret);
+            _printf(F("[HTTPS] Lost connection while client was reading.\n"));
             return false;
         }
 

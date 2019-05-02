@@ -3,11 +3,11 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 26 apr. 2019
-// Last modified date: 01 may. 2019
+// Last modified date: 02 may. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
-#if !defined(ARDUINO) && !defined(ESPIDF) // Windows or Linux
+#if defined(WIN32) || defined(_WIN32) || defined(__linux__) // Windows or Linux
 
 /**************************************************************************************************/
 
@@ -48,25 +48,23 @@ int main(void)
 {
     // Create Bot object
     uTLGBot Bot(TLG_TOKEN);
-    
+
+#if defined(WIN32) || defined(_WIN32)
+    printf("\nRunning test program in Windows.\n\n");
+#elif defined(__linux__)
+    printf("\nRunning test program in Linux.\n\n");
+#endif
+
     // Main loop
     while(1)
     {
-        // Test connection and disconnection
-        /*printf("Connection: %d\n", Bot.is_connected());
-        Bot.connect();
-        printf("Connection: %d\n", Bot.is_connected());
-        Bot.disconnect();
-        printf("Connection: %d\n", Bot.is_connected());
-
         // Test Bot getMe command
         Bot.getMe();
-        
+
         // Test Bot sendMessage command
         Bot.sendMessage(-244141233, "Hello world");
         Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
-        */
-        
+
         // Test Bot getUpdate command and receive messages
         while(Bot.getUpdates())
         {
@@ -99,7 +97,7 @@ int main(void)
             printf("  Text: %s\n", Bot.received_msg.text);
             printf("-----------------------------------------\n");
         }
-        
+
         // Wait 1 min for next iteration
         _delay(60000);
     }

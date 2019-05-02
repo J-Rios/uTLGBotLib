@@ -3,11 +3,11 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 25 apr. 2019
+// Last modified date: 02 may. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
-#if !defined(ARDUINO) && defined(IDF_VER) // ESP32 ESPIDF Framework
+#if defined(ESP_IDF) // ESP32 ESPIDF Framework
 
 /**************************************************************************************************/
 
@@ -60,6 +60,8 @@ void app_main(void)
 {
     // Create Bot object
     uTLGBot Bot(TLG_TOKEN);
+
+    printf("\nRunning test program in ESP32 with ESPIDF Framework.\n\n");
     
     // Initialize Non-Volatile-Storage and WiFi station connection
     nvs_init();
@@ -75,14 +77,6 @@ void app_main(void)
             vTaskDelay(100/portTICK_PERIOD_MS);
             continue;
         }
-        
-        /*
-        // Test connection and disconnection
-        printf("Connection: %d\n", Bot.is_connected());
-        Bot.connect();
-        printf("Connection: %d\n", Bot.is_connected());
-        Bot.disconnect();
-        printf("Connection: %d\n", Bot.is_connected());
 
         // Test Bot getMe command
         Bot.getMe();
@@ -90,7 +84,6 @@ void app_main(void)
         // Test Bot sendMessage command
         Bot.sendMessage(-244141233, "Hello world");
         Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
-        */
         
         // Test Bot getUpdate command and receive messages
         while(Bot.getUpdates())
