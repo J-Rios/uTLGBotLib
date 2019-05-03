@@ -1,5 +1,5 @@
 # uTLGBotLib
-Micro Telegram Bot Library is a lightweight C++ library implementation that use Telegram Bot API to create Bots. The library goal is to be compatible with multiples devices, from embedded microcontrollers, to servers and PCs (WIP). Inside microcontrollers world, uTLGBotLib focus on Espressif ESP32 microcontroller using ESP-IDF SDK, however, Arduino HAL support is also available.
+Micro Telegram Bot Library is a lightweight C++ library implementation that use Telegram Bot API to create Bots. The library goal is to be compatible with multiples devices, from embedded microcontrollers, to servers and PCs. Inside microcontrollers world, uTLGBotLib focus on Espressif ESP32 microcontroller using ESP-IDF SDK, however, Arduino HAL support is also available.
 
 ## Notes
 
