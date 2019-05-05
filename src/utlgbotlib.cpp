@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 04 may. 2019
+// Last modified date: 05 may. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -178,6 +178,10 @@ uint8_t uTLGBot::getMe(void)
 uint8_t uTLGBot::sendMessage(const int64_t chat_id, const char* text, const char* parse_mode, 
     bool disable_web_page_preview, bool disable_notification, uint64_t reply_to_message_id)
 {
+    // Note: Due to undefined behavior if use same source and target in snprintf(), we need to 
+    // use a temporary copy array (dont trust strncat)
+    char msg[HTTP_MAX_BODY_LENGTH];
+    char temp[HTTP_MAX_BODY_LENGTH];
     uint8_t request_result;
     bool connected;
     
@@ -191,7 +195,6 @@ uint8_t uTLGBot::sendMessage(const int64_t chat_id, const char* text, const char
     }
     
     // Create HTTP Body request data
-    char msg[HTTP_MAX_BODY_LENGTH];
     snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("{\"chat_id\":%" PRIi64 ", \"text\":\"%s\"}"), 
         chat_id, text);
     // If parse_mode is not empty
@@ -202,8 +205,9 @@ uint8_t uTLGBot::sendMessage(const int64_t chat_id, const char* text, const char
         {
             // Remove last brace and append the new field
             msg[strlen(msg)-1] = '\0';
-            snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"parse_mode\":\"%s\"}"), msg, 
+            snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"parse_mode\":\"%s\"}"), msg, 
                 parse_mode);
+            snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
         }
         else
             _println("[Bot] Warning: Invalid parse_mode provided.");
@@ -212,20 +216,23 @@ uint8_t uTLGBot::sendMessage(const int64_t chat_id, const char* text, const char
     if(disable_web_page_preview)
     {
         msg[strlen(msg)-1] = '\0';
-        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"disable_web_page_preview\":true}"), msg);
+        snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"disable_web_page_preview\":true}"), msg);
+        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
     }
     // Remove last brace and append disable_notification value if true
     if(disable_notification)
     {
         msg[strlen(msg)-1] = '\0';
-        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"disable_notification\":true}"), msg);
+        snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"disable_notification\":true}"), msg);
+        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
     }
     // Remove last brace and append reply_to_message_id value if set
     if(reply_to_message_id != 0)
     {
         msg[strlen(msg)-1] = '\0';
-        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"reply_to_message_id\":%" PRIu64 "}"), 
+        snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"reply_to_message_id\":%" PRIu64 "}"), 
             msg, reply_to_message_id);
+        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
     }
 
     // Send the request
