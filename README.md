@@ -7,6 +7,8 @@ Micro Telegram Bot Library is a lightweight C++ library implementation that use 
 
 - To build for ESP32 with ESPIDF or Arduino, uncomment "env:espidf" or "env:arduino" section of platformio.ini (comment other sections). Then use Platformio integrated buttons for compile and flash.
 
+- For ESPIDF build, you must provide -DESP_IDF flag (see platformio.init file).
+
 - To build for generic (Native) devices for Windows or Linux, uncomment "env:windows" or "env:linux" section of platformio.ini (comment other sections). Then use "platformio run --target clean", "platformio run" and ".pioenvs/native/program" to clean, build and run, respectively.
 
 - For Windows build, you need an installed mingw environment in your system and ".../mingw/bin" setup in system PATH environment variable.

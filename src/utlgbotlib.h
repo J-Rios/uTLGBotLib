@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 02 may. 2019
+// Last modified date: 04 may. 2019
 // Version: 0.0.1
 /**************************************************************************************************/
 
@@ -14,38 +14,10 @@
 
 /**************************************************************************************************/
 
-/* Check Build System */
-
-#if !defined(ARDUINO) && !defined(ESP_IDF) && !defined(WIN32) && !defined(_WIN32) && \
-!defined(__linux__)
-    #error Unsupported system (Supported: Windows, Linux and ESP32)
-#endif
-
-/**************************************************************************************************/
-
 /* Libraries */
 
 #if defined(ARDUINO) // ESP32 Arduino Framework
     #include <Arduino.h>
-    #include <WiFiClientSecure.h>
-#elif defined(ESP_IDF) // ESP32 ESPIDF Framework
-    #include "esp_tls.h"
-#else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-    #if defined(WIN32) || defined(_WIN32) // Windows
-        #include <windows.h>
-    #endif
-    #include <stdio.h>
-    #include <time.h>
-    #include <unistd.h>
-
-    // MBEDTLS library
-    #include "mbedtls/net.h"
-    #include "mbedtls/ssl.h"
-    #include "mbedtls/entropy.h"
-    #include "mbedtls/ctr_drbg.h"
-    #include "mbedtls/certs.h"
-    #include "mbedtls/debug.h"
-    #include "mbedtls/error.h"
 #endif
 
 //#define __STDC_LIMIT_MACROS // Could be needed for C++, and it must be before inttypes include
@@ -55,6 +27,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "multihttpsclient.h"
+#include "tlgcert.h"
 #include "jsmn.h"
 
 /**************************************************************************************************/
@@ -73,24 +47,8 @@
 // Telegram API address lenght
 #define TELEGRAM_API_LENGTH (TELEGRAM_SERVER_LENGTH + TOKEN_LENGTH)
 
-// Telegram HTTPS Server Port
-#define HTTPS_PORT 443
-
-// HTTP TLS connection timeout (ms)
-#define HTTP_CONNECT_TIMEOUT 5000
-
-// HTTP response wait timeout (ms)
-#define HTTP_WAIT_RESPONSE_TIMEOUT 3000
-
-// Maximum HTTP GET and POST data lenght
-#define HTTP_MAX_URI_LENGTH 128
-#define HTTP_MAX_BODY_LENGTH 1024
-#define HTTP_MAX_GET_LENGTH HTTP_MAX_URI_LENGTH + 128
-#define HTTP_MAX_POST_LENGTH HTTP_MAX_URI_LENGTH + HTTP_MAX_BODY_LENGTH
-#define HTTP_MAX_RES_LENGTH 1024
-
 // Telegram getUpdate Long Poll value (s)
-#define TLG_LONG_POLL 10
+#define TELEGRAM_LONG_POLL 10
 
 // JSON Max values length
 #define MAX_JSON_STR_LEN 1024
@@ -175,7 +133,7 @@ class uTLGBot
 
         // Public Methods
         uTLGBot(const char* token);
-        #if !defined(ARDUINO) && !defined(ESP_IDF) // Windows or Linux
+        #if defined(WIN32) || defined(_WIN32) || defined(__linux__) // Native (Windows, Linux)
             ~uTLGBot(void);
         #endif
         uint8_t connect(void);
@@ -189,51 +147,23 @@ class uTLGBot
 
     private:
         // Private Attributtes
-        #if defined(ARDUINO) // ESP32 Arduino Framework
-            WiFiClientSecure* _client;
-        #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
-            struct esp_tls* _tls;
-            esp_tls_cfg_t* _tls_cfg;
-        #else // Windows and Linux
-            mbedtls_net_context _server_fd;
-            mbedtls_entropy_context _entropy;
-            mbedtls_ctr_drbg_context _ctr_drbg;
-            mbedtls_ssl_context _tls;
-            mbedtls_ssl_config _tls_cfg;
-            mbedtls_x509_crt _cacert;
-        #endif
+        MultiHTTPSClient* _client;
         char _token[TOKEN_LENGTH];
         char _tlg_api[TELEGRAM_API_LENGTH];
         char _response[HTTP_MAX_RES_LENGTH];
-        bool _connected;
         jsmntok_t _json_elements[MAX_JSON_ELEMENTS];
         jsmntok_t _json_subelements[MAX_JSON_SUBELEMENTS];
         char _json_value_str[MAX_JSON_STR_LEN];
         char _json_subvalue_str[MAX_JSON_SUBVAL_STR_LEN];
-        size_t _last_received_msg;
+        uint64_t _last_received_msg;
 
-        // Private Methods - High
+        // Private Methods
         uint8_t tlg_get(const char* command, char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
         uint8_t tlg_post(const char* command, const char* body, const size_t body_len, 
             char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
-        
-        // Private Methods - Low (HAL specifics)
-        bool https_client_init(void);
-        int8_t https_client_connect(const char* host, int port);
-        void https_client_disconnect(void);
-        bool https_client_is_connected(void);
-        size_t https_client_write(const char* request);
-        bool https_client_read(char* response, const size_t response_len);
-        uint8_t https_client_get(const char* uri, const char* host, char* response, 
-            const size_t response_len, 
-            const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
-        uint8_t https_client_post(const char* uri, const char* host, const char* body, 
-            const uint64_t body_len, char* response, const size_t response_len, 
-            const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
-        // Private Methods - Auxiliar Functions
         void clear_msg_data(void);
         uint32_t json_parse_str(const char* json_str, const size_t json_str_len, 
             jsmntok_t* json_tokens, const uint32_t json_tokens_len);
