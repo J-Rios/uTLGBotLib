@@ -4,3 +4,6 @@
 [submodule "lib/_mbedtls/mbedtls"]
 	path = lib/_mbedtls/mbedtls
 	url = https://github.com/ARMmbed/mbedtls
+[submodule "lib/multihttpsclient"]
+	path = lib/multihttpsclient
+	url = https://github.com/J-Rios/multihttpsclient
