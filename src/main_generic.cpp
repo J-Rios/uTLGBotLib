@@ -22,13 +22,6 @@
 
 /**************************************************************************************************/
 
-// WiFi Parameters
-#define WIFI_SSID "mynet1234"
-#define WIFI_PASS "password1234"
-#define MAX_CONN_FAIL 50
-#define MAX_LENGTH_WIFI_SSID 31
-#define MAX_LENGTH_WIFI_PASS 63
-
 // Telegram Bot Token (Get from Botfather)
 #define TLG_TOKEN "XXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
