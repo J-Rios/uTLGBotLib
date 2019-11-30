@@ -3,11 +3,11 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 02 may. 2019
-// Version: 0.0.1
+// Last modified date: 30 nov. 2019
+// Version: 1.0.0
 /**************************************************************************************************/
 
-#if defined(ARDUINO) // ESP32 Arduino Framework
+#if defined(ARDUINO) // ESP8266/ESP32 Arduino Framework
 
 /**************************************************************************************************/
 
@@ -18,7 +18,11 @@
 
 // Device libraries (Arduino ESP32 Core)
 #include <Arduino.h>
-#include <WiFi.h>
+#ifdef ESP8266
+    #include <ESP8266WiFi.h>
+#else
+    #include <WiFi.h>
+#endif
 
 // Custom libraries
 #include "utlgbotlib.h"
@@ -57,10 +61,24 @@ void setup(void)
 {
     Serial.begin(115200);
 
+#ifdef ESP8266
+    Serial.printf("\nRunning test program in ESP8266 with Arduino Framework.\n\n");
+#else
     Serial.printf("\nRunning test program in ESP32 with Arduino Framework.\n\n");
+#endif
 
     // Initialize WiFi station connection
     wifi_init_stat();
+
+    // Wait for WiFi connected
+    while(!wifi_handle_connection())
+        delay(100);
+
+    // Bot getMe command
+    Bot.getMe();
+
+    // Bot sendMessage command
+    Bot.sendMessage("-1001162829058", "<b>Hello World</b>", "HTML", false, false);
 }
 
 void loop()
@@ -73,20 +91,13 @@ void loop()
         return;
     }
 
-    // Test Bot getMe command
-    Bot.getMe();
-
-    // Test Bot sendMessage command
-    Bot.sendMessage(-244141233, "Hello world");
-    Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
-
-    // Test Bot getUpdate command and receive messages
+    // Bot getUpdate command and receive messages
     while(Bot.getUpdates())
     {
         Serial.println("-----------------------------------------");
         Serial.println("Received message.");
 
-        Serial.printf("  From chat ID: %d\n", Bot.received_msg.chat.id);
+        Serial.printf("  From chat ID: %s\n", Bot.received_msg.chat.id);
         Serial.printf("  From chat type: %s\n", Bot.received_msg.chat.type);
         Serial.printf("  From chat alias: %s\n", Bot.received_msg.chat.username);
         Serial.printf("  From chat name: %s %s\n", Bot.received_msg.chat.first_name, 
@@ -97,7 +108,7 @@ void loop()
         else
             Serial.println("  From chat where not all members are admins.");
         
-        Serial.printf("  From user ID: %d\n", Bot.received_msg.from.id);
+        Serial.printf("  From user ID: %s\n", Bot.received_msg.from.id);
         Serial.printf("  From user alias: %s\n", Bot.received_msg.from.username);
         Serial.printf("  From user name: %s %s\n", Bot.received_msg.from.first_name, 
             Bot.received_msg.from.last_name);
@@ -111,10 +122,13 @@ void loop()
         Serial.printf("  Message sent date (UNIX epoch time): %ul\n", Bot.received_msg.date);
         Serial.printf("  Text: %s\n", Bot.received_msg.text);
         Serial.printf("-----------------------------------------\n");
+
+        // Send echo message back
+        Bot.sendMessage(Bot.received_msg.chat.id, Bot.received_msg.text);
     }
 
-    // Wait 1 min for next iteration
-    delay(60000);
+    // Wait 1s for next iteration
+    delay(1000);
 }
 
 /**************************************************************************************************/

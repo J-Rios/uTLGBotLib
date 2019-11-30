@@ -3,8 +3,8 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 26 apr. 2019
-// Last modified date: 02 may. 2019
-// Version: 0.0.1
+// Last modified date: 30 nov. 2019
+// Version: 1.0.0
 /**************************************************************************************************/
 
 #if defined(WIN32) || defined(_WIN32) || defined(__linux__) // Windows or Linux
@@ -48,23 +48,22 @@ int main(void)
     printf("\nRunning test program in Linux.\n\n");
 #endif
 
+    // Bot getMe command
+    Bot.getMe();
+
+    // Bot sendMessage command
+    Bot.sendMessage("-1001162829058", "<b>Hello World</b>", "HTML", false, false);
+
     // Main loop
     while(1)
     {
-        // Test Bot getMe command
-        Bot.getMe();
-
-        // Test Bot sendMessage command
-        Bot.sendMessage(-244141233, "Hello world");
-        Bot.sendMessage(-244141233, "<b>HTML Parse-response Test</b>", "HTML", false, false, 1046);
-
-        // Test Bot getUpdate command and receive messages
+        // Bot getUpdate command and receive messages
         while(Bot.getUpdates())
         {
             printf("-----------------------------------------\n");
             printf("Received message.\n");
 
-            printf("  From chat ID: %" PRIi64 "\n", Bot.received_msg.chat.id);
+            printf("  From chat ID: %s\n", Bot.received_msg.chat.id);
             printf("  From chat type: %s\n", Bot.received_msg.chat.type);
             printf("  From chat alias: %s\n", Bot.received_msg.chat.username);
             printf("  From chat name: %s %s\n", Bot.received_msg.chat.first_name, 
@@ -75,7 +74,7 @@ int main(void)
             else
                 printf("  From chat where not all members are admins.\n");
             
-            printf("  From user ID: %" PRIi64 "\n", Bot.received_msg.from.id);
+            printf("  From user ID: %s\n", Bot.received_msg.from.id);
             printf("  From user alias: %s\n", Bot.received_msg.from.username);
             printf("  From user name: %s %s\n", Bot.received_msg.from.first_name, 
                 Bot.received_msg.from.last_name);
@@ -89,10 +88,13 @@ int main(void)
             printf("  Message sent date (UNIX epoch time): %" PRIi32 "\n", Bot.received_msg.date);
             printf("  Text: %s\n", Bot.received_msg.text);
             printf("-----------------------------------------\n");
+
+            // Send echo message back
+            Bot.sendMessage(Bot.received_msg.chat.id, Bot.received_msg.text);
         }
 
-        // Wait 1 min for next iteration
-        _delay(60000);
+        // Wait 1s for next iteration
+        _delay(1000);
     }
 
     return 0;

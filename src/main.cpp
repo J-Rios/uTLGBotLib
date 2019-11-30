@@ -4,7 +4,7 @@
 // Description: Project main file
 // Created on: 19 mar. 2019
 // Last modified date: 19 mar. 2019
-// Version: 0.0.1
+// Version: 1.0.0
 /**************************************************************************************************/
 
 /* Multiples Devices Build Support */
