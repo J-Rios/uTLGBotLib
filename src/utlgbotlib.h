@@ -3,8 +3,8 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 04 may. 2019
-// Version: 0.0.1
+// Last modified date: 30 nov. 2019
+// Version: 1.0.0
 /**************************************************************************************************/
 
 /* Include Guard */
@@ -57,6 +57,7 @@
 #define MAX_JSON_SUBELEMENTS 64
 
 // Telegram data types Max values length
+#define MAX_ID_LENGTH 24
 #define MAX_USER_LENGTH 32
 #define MAX_USERNAME_LENGTH 32
 #define MAX_LANGUAGE_CODE_LENGTH 8
@@ -83,7 +84,7 @@
 // User: https://core.telegram.org/bots/api#user
 typedef struct tlg_type_user
 {
-    int64_t id;
+    char id[MAX_ID_LENGTH];
     bool is_bot;
     char first_name[MAX_USER_LENGTH];
     char last_name[MAX_USER_LENGTH];
@@ -94,7 +95,7 @@ typedef struct tlg_type_user
 // Chat: https://core.telegram.org/bots/api#chat
 typedef struct tlg_type_chat
 {
-    int64_t id;
+    char id[MAX_ID_LENGTH];
     char type[MAX_CHAT_TYPE_LENGTH];
     char title[MAX_CHAT_TITLE_LENGTH];
     char username[MAX_USERNAME_LENGTH];
@@ -140,7 +141,7 @@ class uTLGBot
         void disconnect(void);
         bool is_connected(void);
         uint8_t getMe(void);
-        uint8_t sendMessage(const int64_t chat_id, const char* text, const char* parse_mode="", 
+        uint8_t sendMessage(const char* chat_id, const char* text, const char* parse_mode="", 
             bool disable_web_page_preview=false, bool disable_notification=false, 
             uint64_t reply_to_message_id=0);
         uint8_t getUpdates(void);
@@ -150,7 +151,7 @@ class uTLGBot
         MultiHTTPSClient* _client;
         char _token[TOKEN_LENGTH];
         char _tlg_api[TELEGRAM_API_LENGTH];
-        char _response[HTTP_MAX_RES_LENGTH];
+        char _buffer[HTTP_MAX_RES_LENGTH];
         jsmntok_t _json_elements[MAX_JSON_ELEMENTS];
         jsmntok_t _json_subelements[MAX_JSON_SUBELEMENTS];
         char _json_value_str[MAX_JSON_STR_LEN];
@@ -173,7 +174,9 @@ class uTLGBot
             const uint32_t converted_str_len);
         uint8_t json_get_key_value(const char* key, const char* json_str, jsmntok_t* tokens, 
             const uint32_t num_tokens, char* converted_str, const uint32_t converted_str_len);
-        bool cstr_read_until_word(char* str, const char* word, char* readed, const bool preserve);
+        int32_t cstr_get_substr_pos_end(char* str, const size_t str_len, const char* substr, 
+            const size_t substr_len);
+        void cstr_rm_char(char* str, const size_t str_len, const char c_remove);
 };
 
 /**************************************************************************************************/
