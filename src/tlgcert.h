@@ -4,6 +4,9 @@
 // Note: This certificate will expire 23/05/2020. After that date, Telegram will get a new one so 
 // you must check for it and change it here
 
+// Telegram SHA1 fingerprint of server certificate
+#define TELEGRAM_FINGERPRINT "BB DC 45 2A 07 E3 4A 71 33 40 32 DA BE 81 F7 72 6F 4A 2B 6B"
+
 #if defined(ESP_IDF)
     extern const uint8_t tlg_api_ca_pem_start[] asm("_binary_res_certs_apitelegramorg_crt_start");
     extern const uint8_t tlg_api_ca_pem_end[] asm("_binary_res_certs_apitelegramorg_crt_end");

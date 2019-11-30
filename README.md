@@ -1,13 +1,15 @@
 # uTLGBotLib
-Micro Telegram Bot Library is a lightweight C++ library implementation that use Telegram Bot API to create Bots. The library goal is to be compatible with multiples devices, from embedded microcontrollers, to servers and PCs. Inside microcontrollers world, uTLGBotLib focus on Espressif ESP32 microcontroller using ESP-IDF SDK, however, Arduino HAL support is also available.
+Micro Telegram Bot Library is a lightweight C++ library implementation that use Telegram Bot API to create Bots. The library goal is to be compatible with multiples devices, from embedded microcontrollers, to Servers and PCs (Windows and Linux). Inside microcontrollers world, uTLGBotLib focus on Espressif ESP32 (support for ESP-IDF and Arduino frameworks) and ESP8266 (support for Arduino) microcontrollers.
 
 ## Notes
 
 - Library developed using Visual Studo Code and Platformio project.
 
-- To build for ESP32 with ESPIDF or Arduino, uncomment "env:espidf" or "env:arduino" section of platformio.ini (comment other sections). Then use Platformio integrated buttons for compile and flash.
+- To build for ESP32 with ESPIDF or Arduino, uncomment "env:esp32_espidf" or "env:esp32_arduino" section of platformio.ini (comment other sections). Then use Platformio integrated buttons for compile and flash.
 
 - For ESPIDF build, you must provide -DESP_IDF flag (see platformio.init file).
+
+- To build for ESP8266 with Arduino, uncomment "env:esp8266_arduino" section of platformio.ini (comment other sections). Then use Platformio integrated buttons for compile and flash.
 
 - To build for generic (Native) devices for Windows or Linux, uncomment "env:windows" or "env:linux" section of platformio.ini (comment other sections). Then use "platformio run --target clean", "platformio run" and ".pioenvs/native/program" to clean, build and run, respectively.
 
