@@ -3,8 +3,8 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 30 nov. 2019
-// Version: 1.0.0
+// Last modified date: 02 dec. 2019
+// Version: 1.0.1
 /**************************************************************************************************/
 
 /* Libraries */
@@ -16,21 +16,21 @@
 /* Macros */
 
 #if defined(ARDUINO) // ESP32 Arduino Framework
-    #define _print(x) do { Serial.print(x); } while(0)
-    #define _println(x) do { Serial.println(x); } while(0)
-    #define _printf(...) do { Serial.printf(__VA_ARGS__); } while(0)
+    #define _print(x) do { if(_debug_level) Serial.print(x); } while(0)
+    #define _println(x) do { if(_debug_level) Serial.println(x); } while(0)
+    #define _printf(...) do { if(_debug_level) Serial.printf(__VA_ARGS__); } while(0)
 #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
-    #define _print(x) do { printf("%s", x); } while(0)
-    #define _println(x) do { printf("%s", x); printf("\n"); } while(0)
-    #define _printf(...) do { printf(__VA_ARGS__); } while(0)
+    #define _print(x) do { if(_debug_level) printf("%s", x); } while(0)
+    #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
+    #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
 
     #define F(x) x
     #define PSTR(x) x
     #define snprintf_P(...) do { snprintf(__VA_ARGS__); } while(0)
 #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-    #define _print(x) do { printf("%s", x); } while(0)
-    #define _println(x) do { printf("%s", x); printf("\n"); } while(0)
-    #define _printf(...) do { printf(__VA_ARGS__); } while(0)
+    #define _print(x) do { if(_debug_level) printf("%s", x); } while(0)
+    #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
+    #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
 
     #define F(x) x
     #define PSTR(x) x
@@ -63,6 +63,7 @@ uTLGBot::uTLGBot(const char* token)
     memset(_json_elements, 0, MAX_JSON_ELEMENTS);
     memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
     _last_received_msg = MAX_U64_VAL;
+    _debug_level = 0;
 
     // Clear message data
     clear_msg_data();
@@ -81,6 +82,14 @@ uTLGBot::uTLGBot(const char* token)
 /**************************************************************************************************/
 
 /* Public Methods */
+
+// Enable/Disable Bot Debug Prints
+void uTLGBot::set_debug(const uint8_t debug_level)
+{
+    _debug_level = debug_level;
+    if(_debug_level > 1)
+        _client->set_debug(true);
+}
 
 // Connect to Telegram server
 uint8_t uTLGBot::connect(void)

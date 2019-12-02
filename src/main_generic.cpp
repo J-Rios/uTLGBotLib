@@ -3,8 +3,8 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 26 apr. 2019
-// Last modified date: 30 nov. 2019
-// Version: 1.0.0
+// Last modified date: 02 dec. 2019
+// Version: 1.0.1
 /**************************************************************************************************/
 
 #if defined(WIN32) || defined(_WIN32) || defined(__linux__) // Windows or Linux
@@ -25,6 +25,9 @@
 // Telegram Bot Token (Get from Botfather)
 #define TLG_TOKEN "XXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
+// Enable Bot debug level
+#define DEBUG_LEVEL_UTLGBOT 0
+
 /**************************************************************************************************/
 
 #if defined(WIN32) || defined(_WIN32) // Windows
@@ -42,6 +45,9 @@ int main(void)
     // Create Bot object
     uTLGBot Bot(TLG_TOKEN);
 
+    // Enable Bot debug
+    Bot.set_debug(DEBUG_LEVEL_UTLGBOT);
+
 #if defined(WIN32) || defined(_WIN32)
     printf("\nRunning test program in Windows.\n\n");
 #elif defined(__linux__)
@@ -52,7 +58,7 @@ int main(void)
     Bot.getMe();
 
     // Bot sendMessage command
-    Bot.sendMessage("-1001162829058", "<b>Hello World</b>", "HTML", false, false);
+    //Bot.sendMessage("-1001162829058", "<b>Hello World</b>", "HTML", false, false);
 
     // Main loop
     while(1)
@@ -60,7 +66,7 @@ int main(void)
         // Bot getUpdate command and receive messages
         while(Bot.getUpdates())
         {
-            printf("-----------------------------------------\n");
+            printf("\n-----------------------------------------\n");
             printf("Received message.\n");
 
             printf("  From chat ID: %s\n", Bot.received_msg.chat.id);

@@ -3,8 +3,8 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 30 nov. 2019
-// Version: 1.0.0
+// Last modified date: 02 dec. 2019
+// Version: 1.0.1
 /**************************************************************************************************/
 
 #if defined(ARDUINO) // ESP8266/ESP32 Arduino Framework
@@ -39,6 +39,9 @@
 // Telegram Bot Token (Get from Botfather)
 #define TLG_TOKEN "XXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
+// Enable Bot debug level
+#define DEBUG_LEVEL_UTLGBOT 2
+
 /**************************************************************************************************/
 
 /* Functions Prototypes */
@@ -59,6 +62,10 @@ uTLGBot Bot(TLG_TOKEN);
 
 void setup(void)
 {
+    // Enable Bot debug
+    Bot.set_debug(DEBUG_LEVEL_UTLGBOT);
+
+    // Initialize Serial
     Serial.begin(115200);
 
 #ifdef ESP8266
@@ -78,7 +85,7 @@ void setup(void)
     Bot.getMe();
 
     // Bot sendMessage command
-    Bot.sendMessage("-1001162829058", "<b>Hello World</b>", "HTML", false, false);
+    //Bot.sendMessage("-1001162829058", "<b>Hello World</b>", "HTML", false, false);
 }
 
 void loop()
@@ -94,7 +101,7 @@ void loop()
     // Bot getUpdate command and receive messages
     while(Bot.getUpdates())
     {
-        Serial.println("-----------------------------------------");
+        Serial.println("\n-----------------------------------------");
         Serial.println("Received message.");
 
         Serial.printf("  From chat ID: %s\n", Bot.received_msg.chat.id);

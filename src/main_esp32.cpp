@@ -3,8 +3,8 @@
 // File: main.cpp
 // Description: Project main file
 // Created on: 19 mar. 2019
-// Last modified date: 30 nov. 2019
-// Version: 1.0.0
+// Last modified date: 02 dec. 2019
+// Version: 1.0.1
 /**************************************************************************************************/
 
 #if defined(ESP_IDF) // ESP32 ESPIDF Framework
@@ -37,6 +37,9 @@
 // Telegram Bot Token (Get from Botfather)
 #define TLG_TOKEN "XXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
+// Enable Bot debug level
+#define DEBUG_LEVEL_UTLGBOT 2
+
 /**************************************************************************************************/
 
 /* Functions Prototypes */
@@ -61,6 +64,9 @@ void app_main(void)
     // Create Bot object
     uTLGBot Bot(TLG_TOKEN);
 
+    // Enable Bot debug
+    Bot.set_debug(DEBUG_LEVEL_UTLGBOT);
+
     printf("\nRunning test program in ESP32 with ESPIDF Framework.\n\n");
     
     // Initialize Non-Volatile-Storage and WiFi station connection
@@ -75,7 +81,7 @@ void app_main(void)
     Bot.getMe();
 
     // Bot sendMessage command
-    Bot.sendMessage("-1001162829058", "<b>Hello World</b>", "HTML", false, false);
+    //Bot.sendMessage("-1001162829058", "<b>Hello World</b>", "HTML", false, false);
 
     // Main loop
     while(1)
@@ -91,7 +97,7 @@ void app_main(void)
         // Bot getUpdate command and receive messages
         while(Bot.getUpdates())
         {
-            printf("-----------------------------------------\n");
+            printf("\n-----------------------------------------\n");
             printf("Received message.\n");
 
             printf("  From chat ID: %s\n", Bot.received_msg.chat.id);

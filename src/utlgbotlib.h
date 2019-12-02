@@ -3,8 +3,8 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 30 nov. 2019
-// Version: 1.0.0
+// Last modified date: 02 dec. 2019
+// Version: 1.0.1
 /**************************************************************************************************/
 
 /* Include Guard */
@@ -137,6 +137,7 @@ class uTLGBot
         #if defined(WIN32) || defined(_WIN32) || defined(__linux__) // Native (Windows, Linux)
             ~uTLGBot(void);
         #endif
+        void set_debug(const uint8_t debug_level);
         uint8_t connect(void);
         void disconnect(void);
         bool is_connected(void);
@@ -157,6 +158,7 @@ class uTLGBot
         char _json_value_str[MAX_JSON_STR_LEN];
         char _json_subvalue_str[MAX_JSON_SUBVAL_STR_LEN];
         uint64_t _last_received_msg;
+        uint8_t _debug_level;
 
         // Private Methods
         uint8_t tlg_get(const char* command, char* response, const size_t response_len, 
