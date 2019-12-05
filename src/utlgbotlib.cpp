@@ -45,7 +45,7 @@
 /* Constructor & Destructor */
 
 // TLGBot constructor, initialize and setup secure client with telegram cert and get the token
-uTLGBot::uTLGBot(const char* token)
+uTLGBot::uTLGBot(const char* token, const bool dont_keep_connection)
 {
 #if defined(ESP_IDF)
     _client = new MultiHTTPSClient(tlg_api_ca_pem_start, tlg_api_ca_pem_end);
@@ -63,6 +63,7 @@ uTLGBot::uTLGBot(const char* token)
     memset(_json_elements, 0, MAX_JSON_ELEMENTS);
     memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
     _last_received_msg = MAX_U64_VAL;
+    _dont_keep_connection = dont_keep_connection;
     _debug_level = 0;
 
     // Clear message data
@@ -177,7 +178,7 @@ uint8_t uTLGBot::getMe(void)
     _println(" ");
 
     // Disconnect from telegram server
-    if(is_connected())
+    if(_dont_keep_connection && is_connected())
         disconnect();
 
     return true;
@@ -270,7 +271,7 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
     _println(" ");
 
     // Disconnect from telegram server
-    if(is_connected())
+    if(_dont_keep_connection && is_connected())
         disconnect();
 
     return true;
@@ -331,20 +332,22 @@ uint8_t uTLGBot::getUpdates(void)
         ptr_response = ptr_response + 1;
     }
 
-    _println(F("\n[Bot] Response received:"));
-    _println(ptr_response);
-    _println(" ");
-
     // Check if response is empty (there is no message)
     if(strlen(ptr_response) == 0)
     {
         _println(F("[Bot] There is not new message."));
 
         // Disconnect from telegram server
-        if(is_connected())
+        if(_dont_keep_connection && is_connected())
             disconnect();
 
         return 0;
+    }
+    else
+    {
+        _println(F("\n[Bot] Response received:"));
+        _println(ptr_response);
+        _println(" ");
     }
 
     // A new message received, so lets clear all message data
@@ -372,7 +375,7 @@ uint8_t uTLGBot::getUpdates(void)
         _last_received_msg = _last_received_msg + 1;
 
         // Disconnect from telegram server
-        if(is_connected())
+        if(_dont_keep_connection && is_connected())
             disconnect();
         
         return 0;
@@ -656,7 +659,7 @@ uint8_t uTLGBot::getUpdates(void)
     }
 
     // Disconnect from telegram server
-    if(is_connected())
+    if(_dont_keep_connection && is_connected())
         disconnect();
     
     return 1;

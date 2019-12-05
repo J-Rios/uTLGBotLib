@@ -133,7 +133,7 @@ class uTLGBot
         tlg_type_message received_msg;
 
         // Public Methods
-        uTLGBot(const char* token);
+        uTLGBot(const char* token, const bool dont_keep_connection=false);
         #if defined(WIN32) || defined(_WIN32) || defined(__linux__) // Native (Windows, Linux)
             ~uTLGBot(void);
         #endif
@@ -158,6 +158,7 @@ class uTLGBot
         char _json_value_str[MAX_JSON_STR_LEN];
         char _json_subvalue_str[MAX_JSON_SUBVAL_STR_LEN];
         uint64_t _last_received_msg;
+        bool _dont_keep_connection;
         uint8_t _debug_level;
 
         // Private Methods
