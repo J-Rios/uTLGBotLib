@@ -1,0 +1,390 @@
+/**************************************************************************************************/
+// File: multihttpsclient_generic.cpp
+// Description: Multiplatform HTTPS Client implementation for Generic systems (Windows and Linux).
+// Created on: 11 may. 2019
+// Last modified date: 02 dec. 2019
+// Version: 1.0.1
+/**************************************************************************************************/
+
+#if defined(WIN32) || defined(_WIN32) || defined(__linux__)
+
+/**************************************************************************************************/
+
+/* Libraries */
+
+#include "multihttpsclient_generic.h"
+
+/**************************************************************************************************/
+
+/* Macros */
+
+#define _print(x) do { if(_debug) printf("%s", x); } while(0)
+#define _println(x) do { if(_debug) printf("%s\n", x); } while(0)
+#define _printf(...) do { if(_debug) printf(__VA_ARGS__); } while(0)
+
+#define F(x) x
+#define PSTR(x) x
+#define snprintf_P(...) do { snprintf(__VA_ARGS__); } while(0)
+#define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
+
+#define PROGMEM
+
+// Initialize millis (just usefull for Generic)
+clock_t _millis_t0 = clock();
+#define _millis() (unsigned long)((clock() - ::_millis_t0)*1000.0/CLOCKS_PER_SEC)
+
+#if defined(WIN32) || defined(_WIN32) // Windows
+    #define _delay(x) do { Sleep(x); } while(0)
+#elif defined(__linux__)
+    #define _delay(x) do { usleep(x*1000); } while(0)
+#endif
+
+/**************************************************************************************************/
+
+/* Constructor & Destructor */
+
+// MultiHTTPSClient constructor, initialize and setup secure client with the certificate
+MultiHTTPSClient::MultiHTTPSClient(char* cert_https_api_telegram_org)
+{
+    _debug = false;
+    _connected = false;
+    _cert_https_api_telegram_org = cert_https_api_telegram_org;
+
+    init();
+}
+
+// MultiHTTPSClient destructor, free mbedtls resources
+MultiHTTPSClient::~MultiHTTPSClient(void)
+{
+    // Release all mbedtls context
+    release_tls_elements();
+}
+
+/**************************************************************************************************/
+
+/* Public Methods */
+
+// Enable/Disable Debug Prints
+void MultiHTTPSClient::set_debug(const bool debug)
+{
+    _debug = debug;
+}
+
+// Make HTTPS client connection to server
+int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
+{
+    int ret;
+
+    // Start connection
+    char str_port[6];
+    snprintf(str_port, 6, "%d", port);
+    if((ret = mbedtls_net_connect(&_server_fd, host, str_port, MBEDTLS_NET_PROTO_TCP)) != 0)
+    {
+        _printf("[HTTPS] Error: Can't connect to server. ");
+        _printf("Start connection fail (mbedtls_net_connect returned %d).\n", ret);
+        return 0;
+    }
+
+    // Set SSL/TLS configuration
+    if((ret = mbedtls_ssl_config_defaults(&_tls_cfg, MBEDTLS_SSL_IS_CLIENT, 
+        MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
+    {
+        _printf("[HTTPS] Error: Can't connect to server ");
+        _printf("Default SSL/TLS configuration fail ");
+        _printf("(mbedtls_ssl_config_defaults returned %d).\n", ret);
+        return 0;
+    }
+    mbedtls_ssl_conf_authmode(&_tls_cfg, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_ca_chain(&_tls_cfg, &_cacert, NULL);
+    mbedtls_ssl_conf_rng(&_tls_cfg, mbedtls_ctr_drbg_random, &_ctr_drbg);
+    //mbedtls_ssl_conf_dbg(&_tls_cfg, my_debug, stdout);
+
+    // SSL/TLS Server, Hostname and Bio setup
+    if((ret = mbedtls_ssl_setup( &_tls, &_tls_cfg)) != 0)
+    {
+        _printf("[HTTPS] Error: Can't connect to server ");
+        _printf("SSL/TLS setup fail (mbedtls_ssl_setup returned %d).\n", ret);
+        return 0;
+    }
+    if((ret = mbedtls_ssl_set_hostname(&_tls, host)) != 0)
+    {
+        _printf("[HTTPS] Error: Can't connect to server. ");
+        _printf("Hostname setup fail (mbedtls_ssl_set_hostname returned %d).\n", ret);
+        return 0;
+    }
+    mbedtls_ssl_set_bio(&_tls, &_server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+
+    // Perform SSL/TLS Handshake
+    while((ret = mbedtls_ssl_handshake(&_tls)) != 0)
+    {
+        if((ret != MBEDTLS_ERR_SSL_WANT_READ) && (ret != MBEDTLS_ERR_SSL_WANT_WRITE))
+        {
+            _printf("[HTTPS] Error: Can't connect to server ");
+            _printf("SSL/TLS handshake fail (mbedtls_ssl_handshake returned -0x%x).\n", -ret);
+            return 0;
+        }
+    }
+
+    // Verify server certificate
+    uint32_t flags;
+    if((flags = mbedtls_ssl_get_verify_result(&_tls)) != 0)
+    {
+        char vrfy_buf[512];
+        mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "  ! ", flags);
+        _printf("[HTTPS] Warning: Invalid Server Certificate.\n%s\n", vrfy_buf);
+        return -1;
+    }
+
+    // Connection stablished and certificate verified
+    _connected = true;
+    return 1;
+}
+
+// HTTPS client disconnect from server
+void MultiHTTPSClient::disconnect(void)
+{
+    // Close connection
+    int ret = mbedtls_ssl_close_notify(&_tls);
+    if((ret != 0) && (ret != MBEDTLS_ERR_SSL_WANT_READ) && (ret != MBEDTLS_ERR_SSL_WANT_WRITE))
+        mbedtls_ssl_session_reset(&_tls);
+
+    // Release all mbedtls context
+    release_tls_elements();
+
+    // Initialize again the mbedtls context
+    init();
+
+    _connected = false;
+}
+
+// Check if HTTPS client is connected
+bool MultiHTTPSClient::is_connected(void)
+{
+    return _connected;
+}
+
+// Make and send a HTTP GET request
+uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response, 
+        const size_t response_len, const unsigned long response_timeout)
+{
+    // Lets use response buffer for make the request first (for the sake of save memory)
+    char* request = response;
+    unsigned long t0, t1;
+
+    // Clear response buffer and create request
+    // Note that we use specific header values for Telegram requests
+    snprintf_P(request, response_len, PSTR("GET %s HTTP/1.1\r\nHost: %s\r\n" \
+            "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
+            "\r\n\r\n"), uri, host);
+
+    // Send request
+    _printf(F("HTTP request to send: %s\n"), request);
+    if(write(request) != strlen(request))
+    {
+        _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
+        return 1;
+    }
+    _println(F("[HTTPS] GET request successfully sent."));
+    memset(response, '\0', response_len);
+
+    // Wait and read response
+    _println(F("[HTTPS] Waiting for response..."));
+    t0 = _millis();
+    while(true)
+    {
+        t1 = _millis();
+
+        // Check for overflow
+        // Note: Due Arduino millis() return an unsigned long instead specific size type, lets just 
+        // handle overflow by reseting counter (this time the timeout can be < 2*expected_timeout)
+        if(t1 < t0)
+        {
+            t0 = 0;
+            continue;
+        }
+
+        // Check for timeout
+        if(t1-t0 >= response_timeout)
+        {
+            _println(F("[HTTPS] Error: No response from server (wait response timeout)."));
+            return 2;
+        }
+
+        // Check for response
+        if(read(response, response_len))
+        {
+            _println(F("[HTTPS] Response successfully received."));
+            break;
+        }
+
+        // Release CPU usage
+        _delay(10);
+    }
+
+    //_printf(F("[HTTPS] Response: %s\n\n"), response);
+    
+    return 0;
+}
+
+// Make and send a HTTP POST request
+uint8_t MultiHTTPSClient::post(const char* uri, const char* host, const char* body, 
+        const uint64_t body_len, char* response, const size_t response_len, 
+        const unsigned long response_timeout)
+{
+    // Lets use response buffer for make the request first (for the sake of save memory)
+    char* request = response;
+    unsigned long t0, t1;
+
+    // Clear response buffer and create request
+    // Note that we use specific header values for Telegram requests
+    snprintf_P(request, response_len, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
+               "User-Agent: ESP32\r\nAccept: text/html,application/xml,application/json" \
+               "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n%s"), uri, 
+               host, body_len, body);
+
+    // Send request
+    _printf(F("HTTP request to send: %s\n"), request);
+    if(write(request) != strlen(request))
+    {
+        _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
+        return 1;
+    }
+    _println(F("[HTTPS] POST request successfully sent."));
+    memset(response, '\0', response_len);
+
+    // Wait and read response
+    _println(F("[HTTPS] Waiting for response..."));
+    t0 = _millis();
+    while(true)
+    {
+        t1 = _millis();
+
+        // Check for overflow
+        // Note: Due Arduino millis() return an unsigned long instead specific size type, lets just 
+        // handle overflow by reseting counter (this time the timeout can be < 2*expected_timeout)
+        if(t1 < t0)
+        {
+            t0 = 0;
+            continue;
+        }
+
+        // Check for timeout
+        if(t1-t0 >= response_timeout)
+        {
+            _println(F("[HTTPS] Error: No response from server (timeout)."));
+            return 2;
+        }
+
+        // Check for response
+        if(read(response, response_len))
+        {
+            _println(F("[HTTPS] Response successfully received."));
+            break;
+        }
+
+        // Release CPU usage
+        _delay(10);
+    }
+
+    //_printf(F("[HTTPS] Response: %s\n\n"), response);
+    
+    return 0;
+}
+
+/**************************************************************************************************/
+
+/* Private Methods */
+
+bool MultiHTTPSClient::init(void)
+{
+    static const char* entropy_generation_key = "tsl_client\0";
+    int ret = 1;
+
+    // Initialization
+    mbedtls_net_init(&_server_fd);
+    mbedtls_ssl_init(&_tls);
+    mbedtls_ssl_config_init(&_tls_cfg);
+    mbedtls_x509_crt_init(&_cacert);
+    mbedtls_ctr_drbg_init(&_ctr_drbg);
+    mbedtls_entropy_init(&_entropy);
+    if((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg, mbedtls_entropy_func, &_entropy, 
+        (const unsigned char*)entropy_generation_key, strlen(entropy_generation_key))) != 0)
+    {
+        printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
+        printf("mbedtls_ctr_drbg_seed returned %d\n", ret);
+        return false;
+    }
+
+    // Load Certificate
+    ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)_cert_https_api_telegram_org, 
+        strlen(_cert_https_api_telegram_org)+1);
+    if(ret < 0)
+    {
+        printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
+        printf("mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
+        return false;
+    }
+
+    return true;
+}
+
+// Release all mbedtls context
+void MultiHTTPSClient::release_tls_elements(void)
+{
+    mbedtls_net_free(&_server_fd);
+    mbedtls_x509_crt_free(&_cacert);
+    mbedtls_ssl_free(&_tls);
+    mbedtls_ssl_config_free(&_tls_cfg);
+    mbedtls_ctr_drbg_free(&_ctr_drbg);
+    mbedtls_entropy_free(&_entropy);
+}
+
+// HTTPS Write
+size_t MultiHTTPSClient::write(const char* request)
+{
+    size_t written_bytes = 0;
+    int ret;
+
+    written_bytes = strlen(request);
+    while((ret = mbedtls_ssl_write(&_tls, (const unsigned char*)request, written_bytes)) <= 0)
+    {
+        if((ret != MBEDTLS_ERR_SSL_WANT_READ) && (ret != MBEDTLS_ERR_SSL_WANT_WRITE))
+        {
+            _printf(F("[HTTPS] Client write error -0x%x\n"), -ret);
+            return 0;
+        }
+    }
+    written_bytes = ret;
+
+    return written_bytes;
+}
+
+// HTTPS Read
+bool MultiHTTPSClient::read(char* response, const size_t response_len)
+{
+    int ret;
+
+    ret = mbedtls_ssl_read(&_tls, (unsigned char*)response, response_len);
+
+    if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
+        return false;
+
+    if(ret < 0)
+    {
+        _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
+        return false;
+    }
+    if(ret == 0)
+    {
+        _printf(F("[HTTPS] Lost connection while client was reading.\n"));
+        return false;
+    }
+
+    if(ret > 0)
+        return true;
+    return false;
+}
+
+/**************************************************************************************************/
+
+#endif

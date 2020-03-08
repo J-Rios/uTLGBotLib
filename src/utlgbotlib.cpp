@@ -459,7 +459,7 @@ uint8_t uTLGBot::getUpdates(void)
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.from.id, MAX_USER_LENGTH, PSTR("%s"), _json_subvalue_str);
+                snprintf_P(received_msg.from.id, MAX_ID_LENGTH, PSTR("%s"), _json_subvalue_str);
             }
 
             // Check and get value of key: is_bot
@@ -566,7 +566,7 @@ uint8_t uTLGBot::getUpdates(void)
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.chat.id, MAX_CHAT_TYPE_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.chat.id, MAX_ID_LENGTH, PSTR("%s"), 
                     _json_subvalue_str);
             }
 

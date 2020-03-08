@@ -1,0 +1,20 @@
+{
+	"name": "uTLGBotLib",
+	"keywords": "arduino, espidf, esp8266, esp32, telegram, bot",
+	"description": "Universal Telegram Bot library for Arduino, ESP-IDF and Native (Windows and Linux) devices, that let you create Telegram Bots. You can use it with ESP8266 and ESP32 microcontrollers.",
+	"authors": {
+		"name": "JRios",
+		"url": "https://github.com/J-Rios"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/J-Rios/uTLGBotLib"
+	},
+	"version": "1.0",
+	"frameworks": ["arduino", "espidf", "native"],
+	"platforms": ["espressif8266", "espressif32"],
+	"build": {
+		"libCompatMode": "off",
+        "extraScript": "beforebuild.py"
+    }
+}

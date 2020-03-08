@@ -1,6 +1,0 @@
-[submodule "lib/jsmn"]
-	path = lib/jsmn
-	url = https://github.com/zserge/jsmn
-[submodule "lib/multihttpsclient"]
-	path = lib/multihttpsclient
-	url = https://github.com/J-Rios/multihttpsclient

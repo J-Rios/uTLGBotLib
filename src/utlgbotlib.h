@@ -27,9 +27,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "multihttpsclient.h"
+#include "utility/multihttpsclient/multihttpsclient.h"
+#include "utility/jsmn/jsmn.h"
 #include "tlgcert.h"
-#include "jsmn.h"
 
 /**************************************************************************************************/
 

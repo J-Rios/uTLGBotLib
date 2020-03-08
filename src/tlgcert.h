@@ -8,8 +8,10 @@
 #define TELEGRAM_FINGERPRINT "BB DC 45 2A 07 E3 4A 71 33 40 32 DA BE 81 F7 72 6F 4A 2B 6B"
 
 #if defined(ESP_IDF)
-    extern const uint8_t tlg_api_ca_pem_start[] asm("_binary_res_certs_apitelegramorg_crt_start");
-    extern const uint8_t tlg_api_ca_pem_end[] asm("_binary_res_certs_apitelegramorg_crt_end");
+    extern const uint8_t tlg_api_ca_pem_start[] \
+        asm("_binary_lib_uTLGBotLib_res_certs_apitelegramorg_crt_start");
+    extern const uint8_t tlg_api_ca_pem_end[] \
+        asm("_binary_lib_uTLGBotLib_res_certs_apitelegramorg_crt_end");
 #else
     const char cert_https_api_telegram_org[] = \
     "-----BEGIN CERTIFICATE-----\r\n" \

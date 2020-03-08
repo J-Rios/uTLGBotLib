@@ -1,14 +1,11 @@
 /**************************************************************************************************/
-// Project: uTLGBotLib
-// File: echobot.cpp
-// Description: Project main file
-// Created on: 11 may. 2019
-// Last modified date: 11 may. 2019
+// Example: echobot
+// Description: 
+//   Bot that response to any received text message with the same text received (echo messages).
+//   It gives you a basic idea of how to receive and send messages.
+// Created on: 21 apr. 2019
+// Last modified date: 21 apr. 2019
 // Version: 1.0.0
-/**************************************************************************************************/
-
-#if defined(WIN32) || defined(_WIN32) || defined(__linux__)
-
 /**************************************************************************************************/
 
 /* Libraries */
@@ -20,13 +17,6 @@
 #include "utlgbotlib.h"
 
 /**************************************************************************************************/
-
-// WiFi Parameters
-#define WIFI_SSID "mynet1234"
-#define WIFI_PASS "password1234"
-#define MAX_CONN_FAIL 50
-#define MAX_LENGTH_WIFI_SSID 31
-#define MAX_LENGTH_WIFI_PASS 63
 
 // Telegram Bot Token (Get from Botfather)
 #define TLG_TOKEN "XXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
@@ -65,5 +55,3 @@ int main(void)
 }
 
 /**************************************************************************************************/
-
-#endif

@@ -1,0 +1,20 @@
+###########################################
+# Syntax Coloring Map For uTLGBotLib
+###########################################
+
+###########################################
+# Datatypes (KEYWORD1)
+###########################################
+
+uTLGBot	KEYWORD1
+
+###########################################
+# Methods and Functions (KEYWORD2)
+###########################################
+
+connect	KEYWORD2
+disconnect	KEYWORD2
+is_connected	KEYWORD2
+getMe	KEYWORD2
+sendMessage	KEYWORD2
+getUpdates	KEYWORD2
