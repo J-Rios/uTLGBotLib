@@ -10,11 +10,11 @@
 		"type": "git",
 		"url": "https://github.com/J-Rios/uTLGBotLib"
 	},
-	"version": "1.0",
+	"version": "1.0.1",
 	"frameworks": ["arduino", "espidf", "native"],
 	"platforms": ["espressif8266", "espressif32"],
 	"build": {
 		"libCompatMode": "off",
-        "extraScript": "beforebuild.py"
-    }
+		"extraScript": "beforebuild.py"
+	}
 }
