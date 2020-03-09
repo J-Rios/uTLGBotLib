@@ -9,9 +9,9 @@
 
 #if defined(ESP_IDF)
     extern const uint8_t tlg_api_ca_pem_start[] \
-        asm("_binary_lib_uTLGBotLib_res_certs_apitelegramorg_crt_start");
+        asm("_binary__pio_libdeps_esp32_espidf_uTLGBotLib_ID7102_res_certs_apitelegramorg_crt_start");
     extern const uint8_t tlg_api_ca_pem_end[] \
-        asm("_binary_lib_uTLGBotLib_res_certs_apitelegramorg_crt_end");
+        asm("_binary__pio_libdeps_esp32_espidf_uTLGBotLib_ID7102_res_certs_apitelegramorg_crt_end");
 #else
     const char cert_https_api_telegram_org[] = \
     "-----BEGIN CERTIFICATE-----\r\n" \
