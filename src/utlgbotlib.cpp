@@ -184,10 +184,19 @@ uint8_t uTLGBot::getMe(void)
     return true;
 }
 
+// Request Bot send a reply keyboard markup
+uint8_t uTLGBot::sendReplyKeyboardMarkup(const char* chat_id, const char* text, 
+    const char* keyboard)
+{
+    static char json_keyboard[256];
+    snprintf(json_keyboard, 256, "{\"keyboard\":%s}", keyboard);
+    return sendMessage(chat_id, text, "", false, false, 0, json_keyboard);
+}
+
 // Request Bot send text message to specified chat ID (The Bot should be in that Chat)
-// Note: reply_markup not implemented
 uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* parse_mode, 
-    bool disable_web_page_preview, bool disable_notification, uint64_t reply_to_message_id)
+    bool disable_web_page_preview, bool disable_notification, uint64_t reply_to_message_id, 
+    const char* reply_markup)
 {
     // Note: Due to undefined behavior if use same source and target in snprintf(), we need to 
     // use a temporary copy array (dont trust strncat)
@@ -242,6 +251,14 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
         msg[strlen(msg)-1] = '\0';
         snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"reply_to_message_id\":%" PRIu64 "}"), 
             msg, reply_to_message_id);
+        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
+    }
+    // Remove last brace and append reply_markup if it is not empty
+    if(reply_markup[0] != '\0')
+    {
+        msg[strlen(msg)-1] = '\0';
+        snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"reply_markup\":%s}"), msg, 
+            reply_markup);
         snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
     }
 
