@@ -92,6 +92,14 @@ void uTLGBot::set_debug(const uint8_t debug_level)
         _client->set_debug(true);
 }
 
+// Set/Modify actual Bot Token
+void uTLGBot::set_token(const char* token)
+{
+    snprintf(_token, TOKEN_LENGTH, "%s", token);
+    snprintf(_tlg_api, TELEGRAM_API_LENGTH, "/bot%s", _token);
+    _println(F("[Bot] Bot token changed."));
+}
+
 // Connect to Telegram server
 uint8_t uTLGBot::connect(void)
 {

@@ -138,6 +138,7 @@ class uTLGBot
             ~uTLGBot(void);
         #endif
         void set_debug(const uint8_t debug_level);
+        void set_token(const char* token);
         uint8_t connect(void);
         void disconnect(void);
         bool is_connected(void);
