@@ -3,8 +3,8 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 02 dec. 2019
-// Version: 1.0.1
+// Last modified date: 09 apr. 2020
+// Version: 1.0.2
 /**************************************************************************************************/
 
 /* Include Guard */
@@ -47,14 +47,8 @@
 // Telegram API address lenght
 #define TELEGRAM_API_LENGTH (TELEGRAM_SERVER_LENGTH + TOKEN_LENGTH)
 
-// Telegram getUpdate Long Poll value (s)
-#define TELEGRAM_LONG_POLL 10
-
-// JSON Max values length
-#define MAX_JSON_STR_LEN 1024
-#define MAX_JSON_SUBVAL_STR_LEN 512
-#define MAX_JSON_ELEMENTS 128
-#define MAX_JSON_SUBELEMENTS 64
+// Default Telegram getUpdate Long Poll value (s)
+#define DEFAULT_TELEGRAM_LONG_POLL_S 1
 
 // Telegram data types Max values length
 #define MAX_ID_LENGTH 24
@@ -66,7 +60,13 @@
 #define MAX_CHAT_DESCRIPTION_LENGTH 128
 #define MAX_URL_LENGTH 64
 #define MAX_STICKER_NAME 32
-#define MAX_TEXT_LENGTH 1024
+#define MAX_TEXT_LENGTH 4097 // Yes, it is 4097 instead 4096 (telegram big brain)
+
+// JSON Max values length
+#define MAX_JSON_STR_LEN MAX_TEXT_LENGTH
+#define MAX_JSON_SUBVAL_STR_LEN 512
+#define MAX_JSON_ELEMENTS 128
+#define MAX_JSON_SUBELEMENTS 64
 
 /**************************************************************************************************/
 
@@ -139,6 +139,9 @@ class uTLGBot
         #endif
         void set_debug(const uint8_t debug_level);
         void set_token(const char* token);
+        void set_polling_timeout(const uint8_t seconds);
+        char* get_token(void);
+        uint8_t get_polling_timeout(void);
         uint8_t connect(void);
         void disconnect(void);
         bool is_connected(void);
@@ -153,6 +156,7 @@ class uTLGBot
     private:
         // Private Attributtes
         MultiHTTPSClient* _client;
+        uint8_t _long_poll_timeout;
         char _token[TOKEN_LENGTH];
         char _tlg_api[TELEGRAM_API_LENGTH];
         char _buffer[HTTP_MAX_RES_LENGTH];

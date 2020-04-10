@@ -2,8 +2,8 @@
 // File: multihttpsclient_espidf.h
 // Description: Multiplatform HTTPS Client implementation for ESP32 ESPIDF Framework.
 // Created on: 11 may. 2019
-// Last modified date: 02 dec. 2019
-// Version: 1.0.1
+// Last modified date: 09 apr. 2020
+// Version: 1.0.2
 /**************************************************************************************************/
 
 #if defined(ESP_IDF)
@@ -39,14 +39,17 @@
 #define HTTP_CONNECT_TIMEOUT 5000
 
 // HTTP response wait timeout (ms)
-#define HTTP_WAIT_RESPONSE_TIMEOUT 3000
+#define HTTP_WAIT_RESPONSE_TIMEOUT 5000
+
+// HTTP response between bytes receptions timeout (ms)
+#define HTTP_RESPONSE_BETWEEN_BYTES_TIMEOUT 500
 
 // Maximum HTTP GET and POST data lenght
 #define HTTP_MAX_URI_LENGTH 128
 #define HTTP_MAX_BODY_LENGTH 1024
 #define HTTP_MAX_GET_LENGTH HTTP_MAX_URI_LENGTH + 128
 #define HTTP_MAX_POST_LENGTH HTTP_MAX_URI_LENGTH + HTTP_MAX_BODY_LENGTH
-#define HTTP_MAX_RES_LENGTH 4096
+#define HTTP_MAX_RES_LENGTH 5120
 
 /**************************************************************************************************/
 
@@ -77,8 +80,10 @@ class MultiHTTPSClient
         // Private Methods
         bool init(void);
         void release_tls_elements(void);
+        uint8_t read_response(char* response, const size_t response_max_len, 
+                const unsigned long response_timeout);
         size_t write(const char* request);
-        bool read(char* response, const size_t response_len);
+        size_t read(char* response, const size_t response_len);
 };
 
 /**************************************************************************************************/

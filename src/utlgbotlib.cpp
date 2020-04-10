@@ -3,8 +3,8 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 02 dec. 2019
-// Version: 1.0.1
+// Last modified date: 09 apr. 2020
+// Version: 1.0.2
 /**************************************************************************************************/
 
 /* Libraries */
@@ -19,10 +19,12 @@
     #define _print(x) do { if(_debug_level) Serial.print(x); } while(0)
     #define _println(x) do { if(_debug_level) Serial.println(x); } while(0)
     #define _printf(...) do { if(_debug_level) Serial.printf(__VA_ARGS__); } while(0)
+    #define _yield() do { yield(); } while(0)
 #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
     #define _print(x) do { if(_debug_level) printf("%s", x); } while(0)
     #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
     #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
+    #define _yield() do { taskYIELD(); } while(0)
 
     #define F(x) x
     #define PSTR(x) x
@@ -31,6 +33,7 @@
     #define _print(x) do { if(_debug_level) printf("%s", x); } while(0)
     #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
     #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
+    #define _yield() (void)
 
     #define F(x) x
     #define PSTR(x) x
@@ -62,6 +65,7 @@ uTLGBot::uTLGBot(const char* token, const bool dont_keep_connection)
     memset(_json_subvalue_str, '\0', MAX_JSON_SUBVAL_STR_LEN);
     memset(_json_elements, 0, MAX_JSON_ELEMENTS);
     memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
+    _long_poll_timeout = DEFAULT_TELEGRAM_LONG_POLL_S;
     _last_received_msg = MAX_U64_VAL;
     _dont_keep_connection = dont_keep_connection;
     _debug_level = 0;
@@ -98,6 +102,26 @@ void uTLGBot::set_token(const char* token)
     snprintf(_token, TOKEN_LENGTH, "%s", token);
     snprintf(_tlg_api, TELEGRAM_API_LENGTH, "/bot%s", _token);
     _println(F("[Bot] Bot token changed."));
+}
+
+// Set/Modify Telegram getUpdates polling request timeout
+void uTLGBot::set_polling_timeout(const uint8_t seconds)
+{
+    _long_poll_timeout = seconds;
+    _printf("[Bot] Bot getUpdate request polling timeout changed to %" PRIu8 "s.\n", 
+        _long_poll_timeout);
+}
+
+// Get actual configured Bot Token
+char* uTLGBot::get_token(void)
+{
+    return _token;
+}
+
+// Get actual configured polling timeout
+uint8_t uTLGBot::get_polling_timeout(void)
+{
+    return _long_poll_timeout;
 }
 
 // Connect to Telegram server
@@ -208,8 +232,8 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
 {
     // Note: Due to undefined behavior if use same source and target in snprintf(), we need to 
     // use a temporary copy array (dont trust strncat)
-    static char msg[HTTP_MAX_BODY_LENGTH];
-    char temp[HTTP_MAX_BODY_LENGTH];
+    static char msg[HTTP_MAX_RES_LENGTH];
+    char temp[HTTP_MAX_RES_LENGTH];
     uint8_t request_result;
     bool connected;
     
@@ -223,7 +247,7 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
     }
     
     // Create HTTP Body request data
-    snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("{\"chat_id\":%s, \"text\":\"%s\"}"), chat_id, text);
+    snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("{\"chat_id\":%s, \"text\":\"%s\"}"), chat_id, text);
     // If parse_mode is not empty
     if(parse_mode[0] != '\0')
     {
@@ -232,9 +256,9 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
         {
             // Remove last brace and append the new field
             msg[strlen(msg)-1] = '\0';
-            snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"parse_mode\":\"%s\"}"), msg, 
+            snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"parse_mode\":\"%s\"}"), msg, 
                 parse_mode);
-            snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
+            snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
         }
         else
             _println("[Bot] Warning: Invalid parse_mode provided.");
@@ -243,31 +267,31 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
     if(disable_web_page_preview)
     {
         msg[strlen(msg)-1] = '\0';
-        snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"disable_web_page_preview\":true}"), msg);
-        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
+        snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"disable_web_page_preview\":true}"), msg);
+        snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
     }
     // Remove last brace and append disable_notification value if true
     if(disable_notification)
     {
         msg[strlen(msg)-1] = '\0';
-        snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"disable_notification\":true}"), msg);
-        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
+        snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"disable_notification\":true}"), msg);
+        snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
     }
     // Remove last brace and append reply_to_message_id value if set
     if(reply_to_message_id != 0)
     {
         msg[strlen(msg)-1] = '\0';
-        snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"reply_to_message_id\":%" PRIu64 "}"), 
+        snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"reply_to_message_id\":%" PRIu64 "}"), 
             msg, reply_to_message_id);
-        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
+        snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
     }
     // Remove last brace and append reply_markup if it is not empty
     if(reply_markup[0] != '\0')
     {
         msg[strlen(msg)-1] = '\0';
-        snprintf_P(temp, HTTP_MAX_BODY_LENGTH, PSTR("%s, \"reply_markup\":%s}"), msg, 
+        snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"reply_markup\":%s}"), msg, 
             reply_markup);
-        snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("%s"), temp);
+        snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
     }
 
     // Send the request
@@ -307,7 +331,7 @@ uint8_t uTLGBot::getUpdates(void)
 {
     uint8_t request_result;
     bool connected;
-    
+
     // Connect to telegram server
     connected = is_connected();
     if(!connected)
@@ -320,14 +344,14 @@ uint8_t uTLGBot::getUpdates(void)
     // Create HTTP Body request data (Note that we limit messages to 1 and just allow text messages)
     static char msg[HTTP_MAX_BODY_LENGTH];
     snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("{\"offset\":%" PRIu64 ", \"limit\":1, " \
-        "\"timeout\":%" PRIu64 ", \"allowed_updates\":[\"message\"]}"), _last_received_msg, 
-        (uint64_t)TELEGRAM_LONG_POLL);
+        "\"timeout\":%" PRIu8 ", \"allowed_updates\":[\"message\"]}"), _last_received_msg, 
+        _long_poll_timeout);
 
     // Send the request
     _println(F("[Bot] Trying to send getUpdates request..."));
     request_result = tlg_post(API_CMD_GET_UPDATES, msg, strlen(msg), _buffer, 
-        HTTP_MAX_RES_LENGTH, HTTP_WAIT_RESPONSE_TIMEOUT+(TELEGRAM_LONG_POLL*1000));
-    
+        HTTP_MAX_RES_LENGTH, (_long_poll_timeout*1000)+HTTP_WAIT_RESPONSE_TIMEOUT);
+
     // Check if request has fail
     if(request_result == false)
     {
@@ -358,7 +382,7 @@ uint8_t uTLGBot::getUpdates(void)
     }
 
     // Check if response is empty (there is no message)
-    if(strlen(ptr_response) == 0)
+    if(ptr_response[0] == '\0')
     {
         _println(F("[Bot] There is not new message."));
 
@@ -717,6 +741,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
+        _println(response);
         memset(response, '\0', response_len);
         return false;
     }
@@ -729,6 +754,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
+        _println(response);
         memset(response, '\0', response_len);
         return false;
     }
@@ -739,6 +765,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     {
         // Clear response due bad request response ("ok" != true)
         _println(F("[Bot] Bad request."));
+        _println(response);
         memset(response, '\0', response_len);
         return false;
     }
@@ -751,6 +778,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
+        _println(response);
         memset(response, '\0', response_len);
         return false;
     }
@@ -794,6 +822,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
+        _println(response);
         memset(response, '\0', response_len);
         return false;
     }
@@ -806,6 +835,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
+        _println(response);
         memset(response, '\0', response_len);
         return false;
     }
@@ -816,6 +846,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     {
         // Clear response due bad request response ("ok" != true)
         _println(F("[Bot] Bad request."));
+        _println(response);
         memset(response, '\0', response_len);
         return false;
     }
@@ -828,6 +859,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
+        _println(response);
         memset(response, '\0', response_len);
         return false;
     }
@@ -839,6 +871,7 @@ uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t bo
     {
         response_init_pos[i] = response[i];
         i = i + 1;
+        _yield();
     }
     response_init_pos[i] = '\0';
 
@@ -919,6 +952,8 @@ uint32_t uTLGBot::json_has_key(const char* json_str, jsmntok_t* json_tokens,
         {
             return i;
         }
+
+        _yield();
     }
     return 0;
 }
@@ -927,12 +962,19 @@ uint32_t uTLGBot::json_has_key(const char* json_str, jsmntok_t* json_tokens,
 void uTLGBot::json_get_element_string(const char* json_str, jsmntok_t* token, char* converted_str, 
     const uint32_t converted_str_len)
 {
-    uint32_t value_len = token->end - token->start;
     const char* value = json_str + token->start;
+    uint32_t value_len = token->end - token->start;
+
+    if(value_len > converted_str_len)
+        value_len = converted_str_len;
 
     memset(converted_str, '\0', converted_str_len);
-    for(uint32_t i = 0; i < value_len; i++) // Dont trust memcpy...
-        converted_str[i] = value[i];
+    memcpy(converted_str, value, value_len);
+    //for(uint32_t i = 0; i < value_len; i++) // Dont trust memcpy, however it is faster...
+    //{
+    //    converted_str[i] = value[i];
+    //    _yield();
+    //}
 }
 
 // Get the corresponding string value of given json key
@@ -973,6 +1015,8 @@ int32_t uTLGBot::cstr_get_substr_pos_end(char* str, const size_t str_len, const 
         }
         str = str + 1;
         i = i + 1;
+
+        _yield();
     }
 
     return position;
@@ -991,6 +1035,8 @@ void uTLGBot::cstr_rm_char(char* str, const size_t str_len, const char c_remove)
             str[a] = str[b];
             a = a + 1;
         }
+
+        _yield();
     }
     str[a] = '\0';
 }
