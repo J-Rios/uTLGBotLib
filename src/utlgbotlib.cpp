@@ -3,8 +3,8 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 09 apr. 2020
-// Version: 1.0.2
+// Last modified date: 11 apr. 2020
+// Version: 1.0.3
 /**************************************************************************************************/
 
 /* Libraries */
@@ -16,32 +16,47 @@
 /* Macros */
 
 #if defined(ARDUINO) // ESP32 Arduino Framework
-    #define _print(x) do { if(_debug_level) Serial.print(x); } while(0)
-    #define _println(x) do { if(_debug_level) Serial.println(x); } while(0)
-    #define _printf(...) do { if(_debug_level) Serial.printf(__VA_ARGS__); } while(0)
+    #ifndef UTLGBOT_NO_DEBUG
+        #define _print(x) do { if(_debug_level) Serial.print(x); } while(0)
+        #define _println(x) do { if(_debug_level) Serial.println(x); } while(0)
+        #define _printf(...) do { if(_debug_level) Serial.printf(__VA_ARGS__); } while(0)
+    #else
+        #define _print(x) (void)
+        #define _println(x) (void)
+        #define _printf(...) (void)
+    #endif
     #define _yield() do { yield(); } while(0)
 #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
-    #define _print(x) do { if(_debug_level) printf("%s", x); } while(0)
-    #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
-    #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
+    #ifndef UTLGBOT_NO_DEBUG
+        #define _print(x) do { if(_debug_level) printf("%s", x); } while(0)
+        #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
+        #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
+    #else
+        #define _print(x) (void)
+        #define _println(x) (void)
+        #define _printf(...) (void)
+    #endif
     #define _yield() do { taskYIELD(); } while(0)
 
     #define F(x) x
     #define PSTR(x) x
     #define snprintf_P(...) do { snprintf(__VA_ARGS__); } while(0)
 #else // Generic devices (intel, amd, arm) and OS (windows, Linux)
-    #define _print(x) do { if(_debug_level) printf("%s", x); } while(0)
-    #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
-    #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
+    #ifndef UTLGBOT_NO_DEBUG
+        #define _print(x) do { if(_debug_level) printf("%s", x); } while(0)
+        #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
+        #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
+    #else
+        #define _print(x) (void)
+        #define _println(x) (void)
+        #define _printf(...) (void)
+    #endif
     #define _yield() (void)
 
     #define F(x) x
     #define PSTR(x) x
     #define snprintf_P(...) do { snprintf(__VA_ARGS__); } while(0)
 #endif
-
-// Maximum value of a uint64_t data type ((2^64)-1)
-#define MAX_U64_VAL 18446744073709551615U
 
 /**************************************************************************************************/
 
@@ -66,7 +81,7 @@ uTLGBot::uTLGBot(const char* token, const bool dont_keep_connection)
     memset(_json_elements, 0, MAX_JSON_ELEMENTS);
     memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
     _long_poll_timeout = DEFAULT_TELEGRAM_LONG_POLL_S;
-    _last_received_msg = MAX_U64_VAL;
+    _last_received_msg = UINT64_MAX;
     _dont_keep_connection = dont_keep_connection;
     _debug_level = 0;
 

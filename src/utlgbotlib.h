@@ -3,8 +3,8 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 09 apr. 2020
-// Version: 1.0.2
+// Last modified date: 11 apr. 2020
+// Version: 1.0.3
 /**************************************************************************************************/
 
 /* Include Guard */
@@ -14,15 +14,38 @@
 
 /**************************************************************************************************/
 
-/* Libraries */
+/* Libraries Configurations */
 
-#if defined(ARDUINO) // ESP32 Arduino Framework
-    #include <Arduino.h>
+// If uTLGBot library without debug was set, disable debug in Multihttpsclient library too
+#ifdef UTLGBOT_NO_DEBUG
+    #define MULTIHTTPSCLIENT_NO_DEBUG
 #endif
 
+// Set default and limit memory usage level
+#ifndef UTLGBOT_MEMORY_LEVEL
+    #define UTLGBOT_MEMORY_LEVEL 5
+#endif
+#if UTLGBOT_MEMORY_LEVEL < 0
+    #undef UTLGBOT_MEMORY_LEVEL
+    #define UTLGBOT_MEMORY_LEVEL 0
+#elif UTLGBOT_MEMORY_LEVEL > 5
+    #undef UTLGBOT_MEMORY_LEVEL
+    #define UTLGBOT_MEMORY_LEVEL 5
+#endif
+
+// Integer types macros
 //#define __STDC_LIMIT_MACROS // Could be needed for C++, and it must be before inttypes include
 //#define __STDC_CONSTANT_MACROS // Could be needed for C++, and it must be before inttypes include
 #define __STDC_FORMAT_MACROS  // Could be needed for C++, and it must be before inttypes include
+
+/**************************************************************************************************/
+
+/* Libraries Inclusion */
+
+#if defined(ARDUINO) // Arduino Framework
+    #include <Arduino.h>
+#endif
+
 #include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
@@ -61,6 +84,45 @@
 #define MAX_URL_LENGTH 64
 #define MAX_STICKER_NAME 32
 #define MAX_TEXT_LENGTH 4097 // Yes, it is 4097 instead 4096 (telegram big brain)
+
+// Telegram HTTPS Server Port
+#define HTTPS_PORT 443
+
+// Maximum HTTP GET and POST data lenght
+#define HTTP_MAX_URI_LENGTH 128
+#define HTTP_MAX_BODY_LENGTH 1024
+#define HTTP_MAX_GET_LENGTH HTTP_MAX_URI_LENGTH + 128
+#define HTTP_MAX_POST_LENGTH HTTP_MAX_URI_LENGTH + HTTP_MAX_BODY_LENGTH
+#define HTTP_MAX_RES_LENGTH 5120
+
+// Memory usage level apply
+#undef MAX_TEXT_LENGTH
+#undef HTTP_MAX_RES_LENGTH
+#if UTLGBOT_MEMORY_LEVEL == 0
+    #warning "Info: uTLGBotLib memory level 0 select."
+    #define MAX_TEXT_LENGTH 128
+    #define HTTP_MAX_RES_LENGTH 1024
+#elif UTLGBOT_MEMORY_LEVEL == 1
+    #warning "Info: uTLGBotLib memory level 1 select."
+    #define MAX_TEXT_LENGTH 256
+    #define HTTP_MAX_RES_LENGTH 1024
+#elif UTLGBOT_MEMORY_LEVEL == 2
+    #warning "Info: uTLGBotLib memory level 2 select."
+    #define MAX_TEXT_LENGTH 512
+    #define HTTP_MAX_RES_LENGTH 1024
+#elif UTLGBOT_MEMORY_LEVEL == 3
+    #warning "Info: uTLGBotLib memory level 3 select."
+    #define MAX_TEXT_LENGTH 1024
+    #define HTTP_MAX_RES_LENGTH 2048
+#elif UTLGBOT_MEMORY_LEVEL == 4
+    #warning "Info: uTLGBotLib memory level 4 select."
+    #define MAX_TEXT_LENGTH 2048
+    #define HTTP_MAX_RES_LENGTH 3072
+#elif UTLGBOT_MEMORY_LEVEL == 5
+    #warning "Info: uTLGBotLib memory level 5 select."
+    #define MAX_TEXT_LENGTH 4097
+    #define HTTP_MAX_RES_LENGTH 5120
+#endif
 
 // JSON Max values length
 #define MAX_JSON_STR_LEN MAX_TEXT_LENGTH

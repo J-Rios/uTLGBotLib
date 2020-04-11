@@ -2,8 +2,8 @@
 // File: multihttpsclient_arduino.cpp
 // Description: Multiplatform HTTPS Client implementation for ESP32 Arduino Framework.
 // Created on: 11 may. 2019
-// Last modified date: 09 apr. 2020
-// Version: 1.0.2
+// Last modified date: 11 apr. 2020
+// Version: 1.0.3
 /**************************************************************************************************/
 
 #if defined(ARDUINO)
@@ -18,9 +18,16 @@
 
 /* Macros */
 
-#define _print(x) do { if(_debug) Serial.print(x); } while(0)
-#define _println(x) do { if(_debug) Serial.println(x); } while(0)
-#define _printf(...) do { if(_debug) Serial.printf(__VA_ARGS__); } while(0)
+#ifndef MULTIHTTPSCLIENT_NO_DEBUG
+    #define _print(x) do { if(_debug) Serial.print(x); } while(0)
+    #define _println(x) do { if(_debug) Serial.println(x); } while(0)
+    #define _printf(...) do { if(_debug) Serial.printf(__VA_ARGS__); } while(0)
+#else
+    #define _print(x) (void)
+    #define _println(x) (void)
+    #define _printf(...) (void)
+#endif
+
 #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
 
 #define _millis_setup() (void)

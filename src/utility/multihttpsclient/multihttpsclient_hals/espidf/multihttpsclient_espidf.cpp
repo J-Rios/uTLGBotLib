@@ -2,8 +2,8 @@
 // File: multihttpsclient_espidf.cpp
 // Description: Multiplatform HTTPS Client implementation for ESP32 ESPIDF Framework.
 // Created on: 11 may. 2019
-// Last modified date: 02 dec. 2019
-// Version: 1.0.1
+// Last modified date: 11 apr. 2020
+// Version: 1.0.3
 /**************************************************************************************************/
 
 #if defined(ESP_IDF)
@@ -18,9 +18,15 @@
 
 /* Macros */
 
-#define _print(x) do { if(_debug) printf("%s", x); } while(0)
-#define _println(x) do { if(_debug) printf("%s\n", x); } while(0)
-#define _printf(...) do { if(_debug) printf(__VA_ARGS__); } while(0)
+#ifndef MULTIHTTPSCLIENT_NO_DEBUG
+    #define _print(x) do { if(_debug) printf("%s", x); } while(0)
+    #define _println(x) do { if(_debug) printf("%s\n", x); } while(0)
+    #define _printf(...) do { if(_debug) printf(__VA_ARGS__); } while(0)
+#else
+    #define _print(x) (void)
+    #define _println(x) (void)
+    #define _printf(...) (void)
+#endif
 
 #define F(x) x
 #define PSTR(x) x
