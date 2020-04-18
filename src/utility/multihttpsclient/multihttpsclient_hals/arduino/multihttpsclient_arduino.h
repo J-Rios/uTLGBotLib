@@ -2,8 +2,8 @@
 // File: multihttpsclient_arduino.h
 // Description: Multiplatform HTTPS Client implementation for ESP32 Arduino Framework.
 // Created on: 11 may. 2019
-// Last modified date: 11 apr. 2020
-// Version: 1.0.3
+// Last modified date: 14 apr. 2020
+// Version: 1.0.4
 /**************************************************************************************************/
 
 #if defined(ARDUINO)
@@ -36,6 +36,9 @@
 // HTTP response between bytes receptions timeout (ms)
 #define HTTP_RESPONSE_BETWEEN_BYTES_TIMEOUT 500
 
+// HTTP Request header max length
+#define HTTP_HEADER_MAX_LENGTH 256
+
 /**************************************************************************************************/
 
 class MultiHTTPSClient
@@ -49,12 +52,13 @@ class MultiHTTPSClient
         bool is_connected(void);
         uint8_t get(const char* uri, const char* host, char* response, const size_t response_len, 
                 const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
-        uint8_t post(const char* uri, const char* host, const char* body, const uint64_t body_len, 
-                char* response, const size_t response_len, 
+        uint8_t post(const char* uri, const char* host, char* request_response, 
+                const size_t request_len, const size_t request_response_max_size, 
                 const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
     private:
         // Private Attributtes
+        char _http_header[HTTP_HEADER_MAX_LENGTH];
         WiFiClientSecure* _client;
         char* _cert_https_api_telegram_org;
         bool _connected;
@@ -63,10 +67,10 @@ class MultiHTTPSClient
         // Private Methods
         bool init(void);
         void release_tls_elements(void);
-        uint8_t read_response(char* response, const size_t response_max_len, 
-                const unsigned long response_timeout);
         size_t write(const char* request);
         size_t read(char* response, const size_t response_len);
+        uint8_t read_response(char* response, const size_t response_max_len, 
+                const unsigned long response_timeout);
 };
 
 /**************************************************************************************************/

@@ -3,7 +3,7 @@
 // File: utlgbotlib.h
 // Description: Lightweight library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 11 apr. 2020
+// Last modified date: 12 apr. 2020
 // Version: 1.0.3
 /**************************************************************************************************/
 
@@ -28,7 +28,8 @@
 #if UTLGBOT_MEMORY_LEVEL < 0
     #undef UTLGBOT_MEMORY_LEVEL
     #define UTLGBOT_MEMORY_LEVEL 0
-#elif UTLGBOT_MEMORY_LEVEL > 5
+#endif
+#if UTLGBOT_MEMORY_LEVEL > 5
     #undef UTLGBOT_MEMORY_LEVEL
     #define UTLGBOT_MEMORY_LEVEL 5
 #endif
@@ -58,6 +59,9 @@
 
 /* Constants */
 
+// Telegram HTTPS Server Port
+#define HTTPS_PORT 443
+
 // Telegram Server address and address lenght
 #define TELEGRAM_SERVER "https://api.telegram.org"
 #define TELEGRAM_HOST "api.telegram.org"
@@ -85,50 +89,44 @@
 #define MAX_STICKER_NAME 32
 #define MAX_TEXT_LENGTH 4097 // Yes, it is 4097 instead 4096 (telegram big brain)
 
-// Telegram HTTPS Server Port
-#define HTTPS_PORT 443
-
-// Maximum HTTP GET and POST data lenght
-#define HTTP_MAX_URI_LENGTH 128
-#define HTTP_MAX_BODY_LENGTH 1024
-#define HTTP_MAX_GET_LENGTH HTTP_MAX_URI_LENGTH + 128
-#define HTTP_MAX_POST_LENGTH HTTP_MAX_URI_LENGTH + HTTP_MAX_BODY_LENGTH
-#define HTTP_MAX_RES_LENGTH 5120
-
 // Memory usage level apply
 #undef MAX_TEXT_LENGTH
-#undef HTTP_MAX_RES_LENGTH
 #if UTLGBOT_MEMORY_LEVEL == 0
     #warning "Info: uTLGBotLib memory level 0 select."
     #define MAX_TEXT_LENGTH 128
-    #define HTTP_MAX_RES_LENGTH 1024
 #elif UTLGBOT_MEMORY_LEVEL == 1
     #warning "Info: uTLGBotLib memory level 1 select."
     #define MAX_TEXT_LENGTH 256
-    #define HTTP_MAX_RES_LENGTH 1024
 #elif UTLGBOT_MEMORY_LEVEL == 2
     #warning "Info: uTLGBotLib memory level 2 select."
     #define MAX_TEXT_LENGTH 512
-    #define HTTP_MAX_RES_LENGTH 1024
 #elif UTLGBOT_MEMORY_LEVEL == 3
     #warning "Info: uTLGBotLib memory level 3 select."
     #define MAX_TEXT_LENGTH 1024
-    #define HTTP_MAX_RES_LENGTH 2048
 #elif UTLGBOT_MEMORY_LEVEL == 4
     #warning "Info: uTLGBotLib memory level 4 select."
     #define MAX_TEXT_LENGTH 2048
-    #define HTTP_MAX_RES_LENGTH 3072
 #elif UTLGBOT_MEMORY_LEVEL == 5
     #warning "Info: uTLGBotLib memory level 5 select."
     #define MAX_TEXT_LENGTH 4097
-    #define HTTP_MAX_RES_LENGTH 5120
+#else
+    #warning "Info: uTLGBotLib invalid memory level selected."
+    #define MAX_TEXT_LENGTH 4097
 #endif
+
+// Maximum HTTP GET and POST data lenght
+#define HTTP_MAX_URI_LENGTH 128
+#define HTTP_MAX_RES_LENGTH MAX_TEXT_LENGTH + 1024
 
 // JSON Max values length
 #define MAX_JSON_STR_LEN MAX_TEXT_LENGTH
 #define MAX_JSON_SUBVAL_STR_LEN 512
-#define MAX_JSON_ELEMENTS 128
-#define MAX_JSON_SUBELEMENTS 64
+#define MAX_JSON_ELEMENTS 64
+#define MAX_JSON_SUBELEMENTS 32
+
+// Others
+#define MAX_KEYBOARD_MARKUP_LENGTH 128
+#define MAX_TMP_BUFFER_LENGTH MAX_KEYBOARD_MARKUP_LENGTH*2
 
 /**************************************************************************************************/
 
@@ -226,6 +224,7 @@ class uTLGBot
         jsmntok_t _json_subelements[MAX_JSON_SUBELEMENTS];
         char _json_value_str[MAX_JSON_STR_LEN];
         char _json_subvalue_str[MAX_JSON_SUBVAL_STR_LEN];
+        char json_keyboard[MAX_KEYBOARD_MARKUP_LENGTH];
         uint64_t _last_received_msg;
         bool _dont_keep_connection;
         uint8_t _debug_level;
@@ -233,11 +232,12 @@ class uTLGBot
         // Private Methods
         uint8_t tlg_get(const char* command, char* response, const size_t response_len, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
-        uint8_t tlg_post(const char* command, const char* body, const size_t body_len, 
-            char* response, const size_t response_len, 
+        uint8_t tlg_post(const char* command, char* request_response, const size_t request_len, 
+            const size_t request_response_max_size, 
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
         void clear_msg_data(void);
+        void cant_create_send_msg(const char* msg);
         uint32_t json_parse_str(const char* json_str, const size_t json_str_len, 
             jsmntok_t* json_tokens, const uint32_t json_tokens_len);
         uint32_t json_has_key(const char* json_str, jsmntok_t* json_tokens, 
@@ -249,6 +249,8 @@ class uTLGBot
         int32_t cstr_get_substr_pos_end(char* str, const size_t str_len, const char* substr, 
             const size_t substr_len);
         void cstr_rm_char(char* str, const size_t str_len, const char c_remove);
+        bool cstr_strncat(char* dest, const size_t dest_max_size, const char* src, 
+            const size_t src_len);
 };
 
 /**************************************************************************************************/

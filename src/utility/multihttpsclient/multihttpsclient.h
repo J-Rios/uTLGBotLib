@@ -22,6 +22,15 @@
 
 /**************************************************************************************************/
 
+/* Libraries Configurations */
+
+// Integer types macros
+//#define __STDC_LIMIT_MACROS // Could be needed for C++, and it must be before inttypes include
+//#define __STDC_CONSTANT_MACROS // Could be needed for C++, and it must be before inttypes include
+#define __STDC_FORMAT_MACROS  // Could be needed for C++, and it must be before inttypes include
+
+/**************************************************************************************************/
+
 /* Use Specific HAL for build system */
 
 #if defined(ARDUINO)

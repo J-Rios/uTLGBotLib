@@ -3,7 +3,7 @@
 // File: utlgbot.h
 // Description: Lightweight Library to implement Telegram Bots.
 // Created on: 19 mar. 2019
-// Last modified date: 11 apr. 2020
+// Last modified date: 12 apr. 2020
 // Version: 1.0.3
 /**************************************************************************************************/
 
@@ -21,9 +21,9 @@
         #define _println(x) do { if(_debug_level) Serial.println(x); } while(0)
         #define _printf(...) do { if(_debug_level) Serial.printf(__VA_ARGS__); } while(0)
     #else
-        #define _print(x) (void)
-        #define _println(x) (void)
-        #define _printf(...) (void)
+        #define _print(x)
+        #define _println(x)
+        #define _printf(...)
     #endif
     #define _yield() do { yield(); } while(0)
 #elif defined(ESP_IDF) // ESP32 ESPIDF Framework
@@ -32,9 +32,9 @@
         #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
         #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
     #else
-        #define _print(x) (void)
-        #define _println(x) (void)
-        #define _printf(...) (void)
+        #define _print(x)
+        #define _println(x)
+        #define _printf(...)
     #endif
     #define _yield() do { taskYIELD(); } while(0)
 
@@ -47,16 +47,21 @@
         #define _println(x) do { if(_debug_level) printf("%s\n", x); } while(0)
         #define _printf(...) do { if(_debug_level) printf(__VA_ARGS__); } while(0)
     #else
-        #define _print(x) (void)
-        #define _println(x) (void)
-        #define _printf(...) (void)
+        #define _print(x)
+        #define _println(x)
+        #define _printf(...)
     #endif
-    #define _yield() (void)
+    #define _yield()
 
     #define F(x) x
     #define PSTR(x) x
     #define snprintf_P(...) do { snprintf(__VA_ARGS__); } while(0)
 #endif
+
+// Functions Return Codes
+#define RC_OK             0
+#define RC_BAD           -1
+#define RC_INVALID_INPUT -2
 
 /**************************************************************************************************/
 
@@ -235,8 +240,7 @@ uint8_t uTLGBot::getMe(void)
 uint8_t uTLGBot::sendReplyKeyboardMarkup(const char* chat_id, const char* text, 
     const char* keyboard)
 {
-    static char json_keyboard[256];
-    snprintf(json_keyboard, 256, "{\"keyboard\":%s}", keyboard);
+    snprintf(json_keyboard, MAX_KEYBOARD_MARKUP_LENGTH, "{\"keyboard\":%s}", keyboard);
     return sendMessage(chat_id, text, "", false, false, 0, json_keyboard);
 }
 
@@ -247,8 +251,7 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
 {
     // Note: Due to undefined behavior if use same source and target in snprintf(), we need to 
     // use a temporary copy array (dont trust strncat)
-    static char msg[HTTP_MAX_RES_LENGTH];
-    char temp[HTTP_MAX_RES_LENGTH];
+    char tmp[MAX_TMP_BUFFER_LENGTH];
     uint8_t request_result;
     bool connected;
     
@@ -262,7 +265,7 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
     }
     
     // Create HTTP Body request data
-    snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("{\"chat_id\":%s, \"text\":\"%s\"}"), chat_id, text);
+    snprintf_P(_buffer, HTTP_MAX_RES_LENGTH, PSTR("{\"chat_id\":%s, \"text\":\"%s\"}"), chat_id, text);
     // If parse_mode is not empty
     if(parse_mode[0] != '\0')
     {
@@ -270,10 +273,13 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
         if((strcmp(parse_mode, "Markdown") == 0) || (strcmp(parse_mode, "HTML") == 0))
         {
             // Remove last brace and append the new field
-            msg[strlen(msg)-1] = '\0';
-            snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"parse_mode\":\"%s\"}"), msg, 
-                parse_mode);
-            snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
+            _buffer[strlen(_buffer)-1] = '\0';
+            snprintf_P(tmp, MAX_TMP_BUFFER_LENGTH, PSTR(",\"parse_mode\":%s\"}"), parse_mode);
+            if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, tmp, strlen(tmp)))
+            {
+                cant_create_send_msg(_buffer);
+                return false;
+            }
         }
         else
             _println("[Bot] Warning: Invalid parse_mode provided.");
@@ -281,42 +287,56 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
     // Remove last brace and append disable_web_page_preview value if true
     if(disable_web_page_preview)
     {
-        msg[strlen(msg)-1] = '\0';
-        snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"disable_web_page_preview\":true}"), msg);
-        snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
+        _buffer[strlen(_buffer)-1] = '\0';
+        if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, ",\"disable_web_page_preview\":true}", 
+            strlen(",\"disable_web_page_preview\":true}")))
+        {
+            cant_create_send_msg(_buffer);
+            return false;
+        }
     }
     // Remove last brace and append disable_notification value if true
     if(disable_notification)
     {
-        msg[strlen(msg)-1] = '\0';
-        snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"disable_notification\":true}"), msg);
-        snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
+        _buffer[strlen(_buffer)-1] = '\0';
+        if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, ",\"disable_notification\":true}", 
+            strlen(",\"disable_notification\":true}")))
+        {
+            cant_create_send_msg(_buffer);
+            return false;
+        }
     }
     // Remove last brace and append reply_to_message_id value if set
     if(reply_to_message_id != 0)
     {
-        msg[strlen(msg)-1] = '\0';
-        snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"reply_to_message_id\":%" PRIu64 "}"), 
-            msg, reply_to_message_id);
-        snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
+        _buffer[strlen(_buffer)-1] = '\0';
+        snprintf_P(tmp, MAX_TMP_BUFFER_LENGTH, PSTR(",\"reply_to_message_id\":%" PRIu64 "}"), 
+            reply_to_message_id);
+        if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, tmp, strlen(tmp)))
+        {
+            cant_create_send_msg(_buffer);
+            return false;
+        }
     }
     // Remove last brace and append reply_markup if it is not empty
     if(reply_markup[0] != '\0')
     {
-        msg[strlen(msg)-1] = '\0';
-        snprintf_P(temp, HTTP_MAX_RES_LENGTH, PSTR("%s, \"reply_markup\":%s}"), msg, 
-            reply_markup);
-        snprintf_P(msg, HTTP_MAX_RES_LENGTH, PSTR("%s"), temp);
+        _buffer[strlen(_buffer)-1] = '\0';
+        snprintf_P(tmp, MAX_TMP_BUFFER_LENGTH, PSTR(",\"reply_markup\":%s}"), reply_markup);
+        if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, tmp, strlen(tmp)))
+        {
+            cant_create_send_msg(_buffer);
+            return false;
+        }
     }
 
     // Send the request
     _println(F("[Bot] Trying to send message request..."));
     _println(F("Mesage to send:"));
-    _println(msg);
+    _println(_buffer);
     _println("");
-    request_result = tlg_post(API_CMD_SEND_MSG, msg, strlen(msg), _buffer, 
-        HTTP_MAX_RES_LENGTH);
-    
+    request_result = tlg_post(API_CMD_SEND_MSG, _buffer, strlen(_buffer), HTTP_MAX_RES_LENGTH);
+
     // Check if request has fail
     if(request_result == false)
     {
@@ -325,7 +345,7 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
         // Disconnect from telegram server
         if(is_connected())
             disconnect();
-            
+
         return false;
     }
 
@@ -357,15 +377,17 @@ uint8_t uTLGBot::getUpdates(void)
     }
 
     // Create HTTP Body request data (Note that we limit messages to 1 and just allow text messages)
-    static char msg[HTTP_MAX_BODY_LENGTH];
-    snprintf_P(msg, HTTP_MAX_BODY_LENGTH, PSTR("{\"offset\":%" PRIu64 ", \"limit\":1, " \
+    snprintf_P(_buffer, HTTP_MAX_RES_LENGTH, PSTR("{\"offset\":%" PRIu64 ", \"limit\":1, " \
         "\"timeout\":%" PRIu8 ", \"allowed_updates\":[\"message\"]}"), _last_received_msg, 
         _long_poll_timeout);
 
     // Send the request
     _println(F("[Bot] Trying to send getUpdates request..."));
-    request_result = tlg_post(API_CMD_GET_UPDATES, msg, strlen(msg), _buffer, 
-        HTTP_MAX_RES_LENGTH, (_long_poll_timeout*1000)+HTTP_WAIT_RESPONSE_TIMEOUT);
+    _println(F("Mesage to send:"));
+    _println(_buffer);
+    _println("");
+    request_result = tlg_post(API_CMD_GET_UPDATES, _buffer, strlen(_buffer), HTTP_MAX_RES_LENGTH, 
+        (_long_poll_timeout*1000)+HTTP_WAIT_RESPONSE_TIMEOUT);
 
     // Check if request has fail
     if(request_result == false)
@@ -812,79 +834,82 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
 }
 
 // Make and send a HTTP GET request
-uint8_t uTLGBot::tlg_post(const char* command, const char* body, const size_t body_len, 
-    char* response, const size_t response_len, const unsigned long response_timeout)
+uint8_t uTLGBot::tlg_post(const char* command, char* request_response, const size_t request_len, 
+    const size_t request_response_max_size, const unsigned long response_timeout)
 {
-    char* response_init_pos = response;
+    char* response_init_pos = request_response;
     char uri[HTTP_MAX_URI_LENGTH];
     int32_t pos = 0;
     uint32_t i = 0;
 
     // Create URI and send POST request
     snprintf_P(uri, HTTP_MAX_URI_LENGTH, PSTR("%s/%s"), _tlg_api, command);
-    if(_client->post(uri, TELEGRAM_HOST, body, body_len, response, response_len, 
-        response_timeout) > 0)
+    if(_client->post(uri, TELEGRAM_HOST, request_response, request_len, 
+        request_response_max_size, response_timeout) > 0)
     {
         return false;
     }
 
     // Remove last character
-    response[strlen(response)-1] = '\0';
+    request_response[strlen(request_response)-1] = '\0';
 
     // Check and remove response header (just keep response body)
-    pos = cstr_get_substr_pos_end(response, strlen(response), "\r\n\r\n", strlen("\r\n\r\n"));
+    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\r\n\r\n", 
+        strlen("\r\n\r\n"));
     if(pos == -1)
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
-        _println(response);
-        memset(response, '\0', response_len);
+        _println(request_response);
+        memset(request_response, '\0', request_response_max_size);
         return false;
     }
-    response = response + pos;
+    request_response = request_response + pos;
 
     // Check for and get request "ok" response key
     // Note: We are assumming "ok" attribute comes before "response" attribute
-    pos = cstr_get_substr_pos_end(response, strlen(response), "\"ok\":", strlen("\"ok\":"));
+    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\"ok\":", 
+        strlen("\"ok\":"));
     if(pos == -1)
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
-        _println(response);
-        memset(response, '\0', response_len);
+        _println(request_response);
+        memset(request_response, '\0', request_response_max_size);
         return false;
     }
-    response = response + pos;
+    request_response = request_response + pos;
 
     // Check if request "ok" response value is "true"
-    if(strncmp(response, "true", strlen("true")) != 0)
+    if(strncmp(request_response, "true", strlen("true")) != 0)
     {
         // Clear response due bad request response ("ok" != true)
         _println(F("[Bot] Bad request."));
-        _println(response);
-        memset(response, '\0', response_len);
+        _println(request_response);
+        memset(request_response, '\0', request_response_max_size);
         return false;
     }
 
     // Remove root json response and just keep "result" attribute json value in response buffer
     // i.e. for response: {"ok":true,"result":[{"id":123456789,"first_name":"esp8266_Bot"}]}
     // just keep: [{"id":123456789,"first_name":"esp8266_Bot"}]
-    pos = cstr_get_substr_pos_end(response, strlen(response), "\"result\":", strlen("\"result\":"));
+    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\"result\":", 
+        strlen("\"result\":"));
     if(pos == -1)
     {
         // Clear response if unexpected response
         _println(F("[Bot] Unexpected response."));
-        _println(response);
-        memset(response, '\0', response_len);
+        _println(request_response);
+        memset(request_response, '\0', request_response_max_size);
         return false;
     }
-    response = response + pos;
+    request_response = request_response + pos;
 
     // Move each byte to initial response address positions
     i = 0;
-    while(i < strlen(response))
+    while(i < strlen(request_response))
     {
-        response_init_pos[i] = response[i];
+        response_init_pos[i] = request_response[i];
         i = i + 1;
         _yield();
     }
@@ -916,6 +941,17 @@ void uTLGBot::clear_msg_data(void)
     received_msg.chat.first_name[0] ='\0';
     received_msg.chat.last_name[0] = '\0';
     received_msg.chat.all_members_are_administrators = false;
+}
+
+// Send message fail to be created
+void uTLGBot::cant_create_send_msg(const char* msg)
+{
+    _println(F("[Bot] Can't create send message:"));
+    _println(msg);
+
+    // Disconnect from telegram server
+    if(is_connected())
+        disconnect();
 }
 
 // Parse and get each json elements from provided json format string
@@ -1054,4 +1090,30 @@ void uTLGBot::cstr_rm_char(char* str, const size_t str_len, const char c_remove)
         _yield();
     }
     str[a] = '\0';
+}
+
+// Safe concatenate a substring to provided string
+bool uTLGBot::cstr_strncat(char* dest, const size_t dest_max_size, const char* src, const size_t src_len)
+{
+    bool rc = true;
+    size_t dest_len = strlen(dest);
+    size_t i = 0;
+
+    for(i = 0; i < src_len; i++)
+    {
+        if(dest_len+i > dest_max_size-1)
+        {
+            dest[dest_max_size-1] = '\0';
+            rc = false;
+            break;
+        }
+        dest[dest_len+i] = src[i];
+    }
+
+    if(dest_len+i >= dest_max_size-1)
+        dest[dest_max_size-1] = '\0';
+    else
+        dest[dest_len+i] = '\0';
+
+    return rc;
 }

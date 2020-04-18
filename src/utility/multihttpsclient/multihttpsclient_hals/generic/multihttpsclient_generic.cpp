@@ -23,9 +23,9 @@
     #define _println(x) do { if(_debug) printf("%s\n", x); } while(0)
     #define _printf(...) do { if(_debug) printf(__VA_ARGS__); } while(0)
 #else
-    #define _print(x) (void)
-    #define _println(x) (void)
-    #define _printf(...) (void)
+    #define _print(x)
+    #define _println(x)
+    #define _printf(...)
 #endif
 
 #define F(x) x
@@ -34,6 +34,7 @@
 #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
 
 #define PROGMEM
+#define _yield()
 
 // Initialize millis (just usefull for Generic)
 clock_t _millis_t0 = clock();
@@ -54,6 +55,7 @@ MultiHTTPSClient::MultiHTTPSClient(char* cert_https_api_telegram_org)
 {
     _debug = false;
     _connected = false;
+    _http_header[0] = '\0';
     _cert_https_api_telegram_org = cert_https_api_telegram_org;
 
     init();
@@ -103,6 +105,7 @@ int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
     mbedtls_ssl_conf_authmode(&_tls_cfg, MBEDTLS_SSL_VERIFY_OPTIONAL);
     mbedtls_ssl_conf_ca_chain(&_tls_cfg, &_cacert, NULL);
     mbedtls_ssl_conf_rng(&_tls_cfg, mbedtls_ctr_drbg_random, &_ctr_drbg);
+    mbedtls_ssl_conf_read_timeout(&_tls_cfg, HTTP_WAIT_RESPONSE_TIMEOUT);
     //mbedtls_ssl_conf_dbg(&_tls_cfg, my_debug, stdout);
 
     // SSL/TLS Server, Hostname and Bio setup
@@ -175,16 +178,15 @@ uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
 {
     // Lets use response buffer for make the request first (for the sake of save memory)
     char* request = response;
-    unsigned long t0, t1;
+    uint8_t rc = 0;
 
-    // Clear response buffer and create request
-    // Note that we use specific header values for Telegram requests
-    snprintf_P(request, response_len, PSTR("GET %s HTTP/1.1\r\nHost: %s\r\n" \
-            "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
-            "\r\n\r\n"), uri, host);
+    // Create header request
+    snprintf_P(request, HTTP_HEADER_MAX_LENGTH, PSTR("GET %s HTTP/1.1\r\nHost: %s\r\n" \
+        "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
+        "\r\n\r\n"), uri, host);
 
     // Send request
-    _printf(F("HTTP request to send: %s\n"), request);
+    _printf("HTTP GET request to send:\n%s", request);
     if(write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -195,106 +197,48 @@ uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
 
     // Wait and read response
     _println(F("[HTTPS] Waiting for response..."));
-    t0 = _millis();
-    while(true)
-    {
-        t1 = _millis();
+    rc = read_response(response, response_len, response_timeout);
+    _printf("[HTTPS] Response: %s\n\n", response);
 
-        // Check for overflow
-        // Note: Due Arduino millis() return an unsigned long instead specific size type, lets just 
-        // handle overflow by reseting counter (this time the timeout can be < 2*expected_timeout)
-        if(t1 < t0)
-        {
-            t0 = 0;
-            continue;
-        }
-
-        // Check for timeout
-        if(t1-t0 >= response_timeout)
-        {
-            _println(F("[HTTPS] Error: No response from server (wait response timeout)."));
-            return 2;
-        }
-
-        // Check for response
-        if(read(response, response_len))
-        {
-            _println(F("[HTTPS] Response successfully received."));
-            break;
-        }
-
-        // Release CPU usage
-        _delay(10);
-    }
-
-    //_printf(F("[HTTPS] Response: %s\n\n"), response);
-    
-    return 0;
+    return rc;
 }
 
 // Make and send a HTTP POST request
-uint8_t MultiHTTPSClient::post(const char* uri, const char* host, const char* body, 
-        const uint64_t body_len, char* response, const size_t response_len, 
+// Provide HTTP body in request_response argument
+// Argument request_response will be modified and returned as request response
+uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_response, 
+        const size_t request_len, const size_t request_response_max_size, 
         const unsigned long response_timeout)
 {
-    // Lets use response buffer for make the request first (for the sake of save memory)
-    char* request = response;
-    unsigned long t0, t1;
+    uint8_t rc = 0;
 
-    // Clear response buffer and create request
-    // Note that we use specific header values for Telegram requests
-    snprintf_P(request, response_len, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
-               "User-Agent: ESP32\r\nAccept: text/html,application/xml,application/json" \
-               "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n%s"), uri, 
-               host, body_len, body);
+    // Create header request
+    snprintf_P(_http_header, HTTP_HEADER_MAX_LENGTH, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
+        "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
+        "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n"), uri, 
+        host, (uint64_t)request_len);
 
     // Send request
-    _printf(F("HTTP request to send: %s\n"), request);
-    if(write(request) != strlen(request))
+    _printf("HTTP POST request to send:\n%s%s\n", _http_header, request_response);
+    if(write(_http_header) != strlen(_http_header))
+    {
+        _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
+        return 1;
+    }
+    if(write(request_response) != strlen(request_response))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
         return 1;
     }
     _println(F("[HTTPS] POST request successfully sent."));
-    memset(response, '\0', response_len);
+    memset(request_response, '\0', request_response_max_size);
 
     // Wait and read response
     _println(F("[HTTPS] Waiting for response..."));
-    t0 = _millis();
-    while(true)
-    {
-        t1 = _millis();
+    rc = read_response(request_response, request_response_max_size, response_timeout);
+    _printf("[HTTPS] Response: %s\n\n", request_response);
 
-        // Check for overflow
-        // Note: Due Arduino millis() return an unsigned long instead specific size type, lets just 
-        // handle overflow by reseting counter (this time the timeout can be < 2*expected_timeout)
-        if(t1 < t0)
-        {
-            t0 = 0;
-            continue;
-        }
-
-        // Check for timeout
-        if(t1-t0 >= response_timeout)
-        {
-            _println(F("[HTTPS] Error: No response from server (timeout)."));
-            return 2;
-        }
-
-        // Check for response
-        if(read(response, response_len))
-        {
-            _println(F("[HTTPS] Response successfully received."));
-            break;
-        }
-
-        // Release CPU usage
-        _delay(10);
-    }
-
-    //_printf(F("[HTTPS] Response: %s\n\n"), response);
-    
-    return 0;
+    return rc;
 }
 
 /**************************************************************************************************/
@@ -366,29 +310,42 @@ size_t MultiHTTPSClient::write(const char* request)
 }
 
 // HTTPS Read
-bool MultiHTTPSClient::read(char* response, const size_t response_len)
+size_t MultiHTTPSClient::read(char* response, const size_t response_len)
 {
     int ret;
-
+_printf("Reading\n");
     ret = mbedtls_ssl_read(&_tls, (unsigned char*)response, response_len);
+_printf("OK\n");
 
     if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
-        return false;
+        return 0;
 
     if(ret < 0)
     {
         _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
-        return false;
+        return 0;
     }
     if(ret == 0)
     {
         _printf(F("[HTTPS] Lost connection while client was reading.\n"));
-        return false;
+        return 0;
     }
 
-    if(ret > 0)
-        return true;
-    return false;
+    return (size_t)ret;
+}
+
+
+// HTTP Read Response
+uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_max_len, 
+        const unsigned long response_timeout)
+{
+    size_t rc = 0;
+
+    rc = read(response, response_max_len);
+    if(rc > 0)
+        return 0;
+    else
+        return 1;
 }
 
 /**************************************************************************************************/

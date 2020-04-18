@@ -2,8 +2,8 @@
 // File: multihttpsclient_generic.h
 // Description: Multiplatform HTTPS Client implementation for Generic systems (Windows and Linux).
 // Created on: 11 may. 2019
-// Last modified date: 11 apr. 2020
-// Version: 1.0.3
+// Last modified date: 14 apr. 2020
+// Version: 1.0.4
 /**************************************************************************************************/
 
 #if defined(WIN32) || defined(_WIN32) || defined(__linux__)
@@ -46,6 +46,12 @@
 // HTTP response wait timeout (ms)
 #define HTTP_WAIT_RESPONSE_TIMEOUT 5000
 
+// HTTP response between bytes receptions timeout (ms)
+#define HTTP_RESPONSE_BETWEEN_BYTES_TIMEOUT 500
+
+// HTTP Request header max length
+#define HTTP_HEADER_MAX_LENGTH 256
+
 /**************************************************************************************************/
 
 class MultiHTTPSClient
@@ -60,12 +66,13 @@ class MultiHTTPSClient
         bool is_connected(void);
         uint8_t get(const char* uri, const char* host, char* response, const size_t response_len, 
                 const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
-        uint8_t post(const char* uri, const char* host, const char* body, const uint64_t body_len, 
-                char* response, const size_t response_len, 
+        uint8_t post(const char* uri, const char* host, char* request_response, 
+                const size_t request_len, const size_t request_response_max_size, 
                 const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
     private:
         // Private Attributtes
+        char _http_header[HTTP_HEADER_MAX_LENGTH];
         char* _cert_https_api_telegram_org;
         mbedtls_net_context _server_fd;
         mbedtls_entropy_context _entropy;
@@ -80,7 +87,9 @@ class MultiHTTPSClient
         bool init(void);
         void release_tls_elements(void);
         size_t write(const char* request);
-        bool read(char* response, const size_t response_len);
+        size_t read(char* response, const size_t response_len);
+        uint8_t read_response(char* response, const size_t response_max_len, 
+        const unsigned long response_timeout);
 };
 
 /**************************************************************************************************/

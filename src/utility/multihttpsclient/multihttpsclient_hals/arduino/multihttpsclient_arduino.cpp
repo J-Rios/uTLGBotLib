@@ -2,8 +2,8 @@
 // File: multihttpsclient_arduino.cpp
 // Description: Multiplatform HTTPS Client implementation for ESP32 Arduino Framework.
 // Created on: 11 may. 2019
-// Last modified date: 11 apr. 2020
-// Version: 1.0.3
+// Last modified date: 14 apr. 2020
+// Version: 1.0.4
 /**************************************************************************************************/
 
 #if defined(ARDUINO)
@@ -23,14 +23,14 @@
     #define _println(x) do { if(_debug) Serial.println(x); } while(0)
     #define _printf(...) do { if(_debug) Serial.printf(__VA_ARGS__); } while(0)
 #else
-    #define _print(x) (void)
-    #define _println(x) (void)
-    #define _printf(...) (void)
+    #define _print(x)
+    #define _println(x)
+    #define _printf(...)
 #endif
 
 #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
 
-#define _millis_setup() (void)
+#define _millis_setup()
 #define _millis() millis()
 #define _delay(x) delay(x)
 #define _yield() yield()
@@ -44,6 +44,8 @@ MultiHTTPSClient::MultiHTTPSClient(char* cert_https_api_telegram_org)
 {
     _debug = false;
     _connected = false;
+    _http_header[0] = '\0';
+    _client = NULL;
     _cert_https_api_telegram_org = cert_https_api_telegram_org;
 
     init();
@@ -90,16 +92,15 @@ uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
     char* request = response;
     uint8_t rc = 1;
 
-    // Clear response buffer and create request
-    // Note that we use specific header values for Telegram requests
-    snprintf_P(request, response_len, PSTR("GET %s HTTP/1.1\r\nHost: %s\r\n" \
-            "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
-            "\r\n\r\n"), uri, host);
+    // Create header request
+    snprintf_P(request, HTTP_HEADER_MAX_LENGTH, PSTR("GET %s HTTP/1.1\r\nHost: %s\r\n" \
+        "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
+        "\r\n\r\n"), uri, host);
 
     // Send request
-    //_print(F("HTTP request to send: "));
-    //_println(request);
-    //_println();
+    _println(F("HTTP GET request to send: "));
+    _println(request);
+    _println();
     if(write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -111,43 +112,48 @@ uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
     // Wait and read response
     _println(F("[HTTPS] Waiting for response..."));
     rc = read_response(response, response_len, response_timeout);
-    //_printf(F("[HTTPS] Response: %s\n\n"), response);
+    _printf("[HTTPS] Response: %s\n\n", response);
     
     return rc;
 }
 
 // Make and send a HTTP POST request
-uint8_t MultiHTTPSClient::post(const char* uri, const char* host, const char* body, 
-        const uint64_t body_len, char* response, const size_t response_len, 
+// Provide HTTP body in request_response argument
+// Argument request_response will be modified and returned as request response
+uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_response, 
+        const size_t request_len, const size_t request_response_max_size, 
         const unsigned long response_timeout)
 {
-    // Lets use response buffer for make the request first (for the sake of save memory)
-    char* request = response;
     uint8_t rc = 1;
 
-    // Clear response buffer and create request
-    // Note that we use specific header values for Telegram requests
-    snprintf_P(request, response_len, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
-               "User-Agent: ESP32\r\nAccept: text/html,application/xml,application/json" \
-               "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n%s"), uri, 
-               host, body_len, body);
+    // Create header request
+    snprintf_P(_http_header, HTTP_HEADER_MAX_LENGTH, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
+        "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
+        "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n"), uri, 
+        host, (uint64_t)request_len);
 
     // Send request
-    //_print(F("HTTP request to send: "));
-    //_println(request);
-    //_println();
-    if(write(request) != strlen(request))
+    _println(F("HTTP POST request to send: "));
+    _println(_http_header);
+    _println(request_response);
+    _println();
+    if(write(_http_header) != strlen(_http_header))
+    {
+        _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
+        return 1;
+    }
+    if(write(request_response) != strlen(request_response))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
         return 1;
     }
     _println(F("[HTTPS] POST request successfully sent."));
-    memset(response, '\0', response_len);
+    memset(request_response, '\0', request_response_max_size);
 
     // Wait and read response
     _println(F("[HTTPS] Waiting for response..."));
-    rc = read_response(response, response_len, response_timeout);
-    _printf("[HTTPS] Response: %s\n\n", response);
+    rc = read_response(request_response, request_response_max_size, response_timeout);
+    _printf("[HTTPS] Response: %s\n\n", request_response);
 
     return rc;
 }
@@ -184,6 +190,34 @@ void MultiHTTPSClient::release_tls_elements(void)
     /* Not release in microcontrollers */
 }
 
+// HTTPS Write
+size_t MultiHTTPSClient::write(const char* request)
+{
+    return _client->print(request);
+}
+
+// HTTPS Read
+size_t MultiHTTPSClient::read(char* response, const size_t response_len)
+{
+    char c;
+    size_t i = 0;
+
+    while(_client->available())
+    {
+        c = _client->read();
+        if(i < response_len-1)
+        {
+            response[i] = c;
+            i = i + 1;
+        }
+
+        _yield();
+    }
+
+    return i;
+}
+
+// HTTP Read Response
 uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_max_len, 
         const unsigned long response_timeout)
 {
@@ -250,33 +284,6 @@ uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_ma
     }
 
     return 0;
-}
-
-// HTTPS Write
-size_t MultiHTTPSClient::write(const char* request)
-{
-    return _client->print(request);
-}
-
-// HTTPS Read
-size_t MultiHTTPSClient::read(char* response, const size_t response_len)
-{
-    char c;
-    size_t i = 0;
-
-    while(_client->available())
-    {
-        c = _client->read();
-        if(i < response_len-1)
-        {
-            response[i] = c;
-            i = i + 1;
-        }
-
-        _yield();
-    }
-
-    return i;
 }
 
 /**************************************************************************************************/

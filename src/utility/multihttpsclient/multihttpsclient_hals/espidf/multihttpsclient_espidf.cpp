@@ -2,8 +2,8 @@
 // File: multihttpsclient_espidf.cpp
 // Description: Multiplatform HTTPS Client implementation for ESP32 ESPIDF Framework.
 // Created on: 11 may. 2019
-// Last modified date: 11 apr. 2020
-// Version: 1.0.3
+// Last modified date: 14 apr. 2020
+// Version: 1.0.4
 /**************************************************************************************************/
 
 #if defined(ESP_IDF)
@@ -23,9 +23,9 @@
     #define _println(x) do { if(_debug) printf("%s\n", x); } while(0)
     #define _printf(...) do { if(_debug) printf(__VA_ARGS__); } while(0)
 #else
-    #define _print(x) (void)
-    #define _println(x) (void)
-    #define _printf(...) (void)
+    #define _print(x)
+    #define _println(x)
+    #define _printf(...)
 #endif
 
 #define F(x) x
@@ -33,12 +33,12 @@
 #define snprintf_P(...) do { snprintf(__VA_ARGS__); } while(0)
 #define sscanf_P(...) do { sscanf(__VA_ARGS__); } while(0)
 
-#define _millis_setup() 
+#define _millis_setup()
 #define _millis() (unsigned long)(esp_timer_get_time()/1000)
 #define _delay(x) do { vTaskDelay(x/portTICK_PERIOD_MS); } while(0)
 #define _yield() do { taskYIELD(); } while(0)
 
-#define PROGMEM (void)
+#define PROGMEM
 
 /**************************************************************************************************/
 
@@ -50,8 +50,11 @@ MultiHTTPSClient::MultiHTTPSClient(const uint8_t* tlg_api_ca_pem_start,
 {
     _debug = false;
     _connected = false;
+    _http_header[0] = '\0';
     _tlg_api_ca_pem_start = tlg_api_ca_pem_start;
     _tlg_api_ca_pem_end = tlg_api_ca_pem_end;
+    _tls = NULL;
+    _tls_cfg = NULL;
 
     init();
 }
@@ -158,14 +161,13 @@ uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
     char* request = response;
     uint8_t rc = 1;
 
-    // Clear response buffer and create request
-    // Note that we use specific header values for Telegram requests
-    snprintf_P(request, response_len, PSTR("GET %s HTTP/1.1\r\nHost: %s\r\n" \
-            "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
-            "\r\n\r\n"), uri, host);
+    // Create header request
+    snprintf_P(request, HTTP_HEADER_MAX_LENGTH, PSTR("GET %s HTTP/1.1\r\nHost: %s\r\n" \
+        "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
+        "\r\n\r\n"), uri, host);
 
     // Send request
-    _printf(F("HTTP request to send: %s\n"), request);
+    _printf("HTTP GET request to send:\n%s\n", request);
     if(write(request) != strlen(request))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
@@ -177,41 +179,45 @@ uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
     // Wait and read response
     _println(F("[HTTPS] Waiting for response..."));
     rc = read_response(response, response_len, response_timeout);
-    _printf(F("[HTTPS] Response: %s\n\n"), response);
+    _printf("[HTTPS] Response: %s\n\n", response);
     
     return rc;
 }
 
 // Make and send a HTTP POST request
-uint8_t MultiHTTPSClient::post(const char* uri, const char* host, const char* body, 
-        const uint64_t body_len, char* response, const size_t response_len, 
+// Provide HTTP body in request_response argument
+// Argument request_response will be modified and returned as request response
+uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_response, 
+        const size_t request_len, const size_t request_response_max_size, 
         const unsigned long response_timeout)
 {
-    // Lets use response buffer for make the request first (for the sake of save memory)
-    char* request = response;
     uint8_t rc = 1;
 
-    // Clear response buffer and create request
-    // Note that we use specific header values for Telegram requests
-    snprintf_P(request, response_len, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
-               "User-Agent: ESP32\r\nAccept: text/html,application/xml,application/json" \
-               "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n%s"), uri, 
-               host, body_len, body);
+    // Create header request
+    snprintf_P(_http_header, HTTP_HEADER_MAX_LENGTH, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
+        "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
+        "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n"), uri, 
+        host, (uint64_t)request_len);
 
     // Send request
-    _printf(F("HTTP request to send: %s\n"), request);
-    if(write(request) != strlen(request))
+    _printf("HTTP POST request to send:\n%s%s\n", _http_header, request_response);
+    if(write(_http_header) != strlen(_http_header))
+    {
+        _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
+        return 1;
+    }
+    if(write(request_response) != strlen(request_response))
     {
         _println(F("[HTTPS] Error: Incomplete HTTP request sent (sent less bytes than expected)."));
         return 1;
     }
     _println(F("[HTTPS] POST request successfully sent."));
-    memset(response, '\0', response_len);
+    memset(request_response, '\0', request_response_max_size);
 
     // Wait and read response
     _println(F("[HTTPS] Waiting for response..."));
-    rc = read_response(response, response_len, response_timeout);
-    _printf(F("[HTTPS] Response: %s\n\n"), response);
+    rc = read_response(request_response, request_response_max_size, response_timeout);
+    _printf("[HTTPS] Response: %s\n\n", request_response);
     
     return rc;
 }
@@ -239,6 +245,52 @@ void MultiHTTPSClient::release_tls_elements(void)
     /* Not release in microcontrollers */
 }
 
+// HTTPS Write
+size_t MultiHTTPSClient::write(const char* request)
+{
+    size_t written_bytes = 0;
+    int ret;
+    
+    do
+    {
+        ret = esp_tls_conn_write(_tls, request + written_bytes, strlen(request) - 
+            written_bytes);
+        if(ret > 0)
+            written_bytes += ret;
+        else if(ret != MBEDTLS_ERR_SSL_WANT_READ  && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
+        {
+            _printf(F("[HTTPS] Client write error 0x%x\n"), ret);
+            break;
+        }
+    } while(written_bytes < strlen(request));
+
+    return written_bytes;
+}
+
+// HTTPS Read
+size_t MultiHTTPSClient::read(char* response, const size_t response_len)
+{
+    ssize_t ret;
+
+    ret = esp_tls_conn_read(_tls, response, response_len);
+
+    if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
+        return 0;
+    if(ret < 0)
+    {
+        _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
+        return 0;
+    }
+    if(ret == 0)
+    {
+        _printf(F("[HTTPS] Lost connection while client was reading.\n"));
+        return 0;
+    }
+
+    return ret;
+}
+
+// HTTP Read Response
 uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_max_len, 
         const unsigned long response_timeout)
 {
@@ -305,51 +357,6 @@ uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_ma
     }
 
     return 0;
-}
-
-// HTTPS Write
-size_t MultiHTTPSClient::write(const char* request)
-{
-    size_t written_bytes = 0;
-    int ret;
-    
-    do
-    {
-        ret = esp_tls_conn_write(_tls, request + written_bytes, strlen(request) - 
-            written_bytes);
-        if(ret > 0)
-            written_bytes += ret;
-        else if(ret != MBEDTLS_ERR_SSL_WANT_READ  && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-        {
-            _printf(F("[HTTPS] Client write error 0x%x\n"), ret);
-            break;
-        }
-    } while(written_bytes < strlen(request));
-
-    return written_bytes;
-}
-
-// HTTPS Read
-size_t MultiHTTPSClient::read(char* response, const size_t response_len)
-{
-    ssize_t ret;
-
-    ret = esp_tls_conn_read(_tls, response, response_len);
-
-    if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
-        return 0;
-    if(ret < 0)
-    {
-        _printf(F("[HTTPS] Client read error -0x%x\n"), -ret);
-        return 0;
-    }
-    if(ret == 0)
-    {
-        _printf(F("[HTTPS] Lost connection while client was reading.\n"));
-        return 0;
-    }
-
-    return ret;
 }
 
 /**************************************************************************************************/
