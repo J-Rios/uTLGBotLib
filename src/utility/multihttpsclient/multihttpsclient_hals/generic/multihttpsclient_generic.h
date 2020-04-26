@@ -58,9 +58,11 @@ class MultiHTTPSClient
 {
     public:
         // Public Methods
-        MultiHTTPSClient(char* cert_https_api_telegram_org);
+        MultiHTTPSClient(void);
         ~MultiHTTPSClient(void);
         void set_debug(const bool debug);
+        void set_cert(const char* cert_https_server);
+        void set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end);
         int8_t connect(const char* host, uint16_t port);
         void disconnect(void);
         bool is_connected(void);
@@ -73,7 +75,7 @@ class MultiHTTPSClient
     private:
         // Private Attributtes
         char _http_header[HTTP_HEADER_MAX_LENGTH];
-        char* _cert_https_api_telegram_org;
+        const char* _cert_https_server;
         mbedtls_net_context _server_fd;
         mbedtls_entropy_context _entropy;
         mbedtls_ctr_drbg_context _ctr_drbg;

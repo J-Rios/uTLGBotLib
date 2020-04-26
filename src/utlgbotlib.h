@@ -53,7 +53,6 @@
 
 #include "utility/multihttpsclient/multihttpsclient.h"
 #include "utility/jsmn/jsmn.h"
-#include "tlgcert.h"
 
 /**************************************************************************************************/
 
@@ -199,6 +198,7 @@ class uTLGBot
         #endif
         void set_debug(const uint8_t debug_level);
         void set_token(const char* token);
+        void set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end=NULL);
         void set_polling_timeout(const uint8_t seconds);
         char* get_token(void);
         uint8_t get_polling_timeout(void);
@@ -216,6 +216,8 @@ class uTLGBot
     private:
         // Private Attributtes
         MultiHTTPSClient* _client;
+        const uint8_t* _tlg_api_ca_pem_start;
+        const uint8_t* _tlg_api_ca_pem_end;
         uint8_t _long_poll_timeout;
         char _token[TOKEN_LENGTH];
         char _tlg_api[TELEGRAM_API_LENGTH];

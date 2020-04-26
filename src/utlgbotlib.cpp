@@ -70,13 +70,7 @@
 // TLGBot constructor, initialize and setup secure client with telegram cert and get the token
 uTLGBot::uTLGBot(const char* token, const bool dont_keep_connection)
 {
-#if defined(ESP_IDF)
-    _client = new MultiHTTPSClient(tlg_api_ca_pem_start, tlg_api_ca_pem_end);
-#elif defined(ARDUINO)
-    _client = new MultiHTTPSClient((char*)TELEGRAM_FINGERPRINT);
-#else
-    _client = new MultiHTTPSClient((char*)cert_https_api_telegram_org);
-#endif
+    _client = new MultiHTTPSClient();
 
     snprintf(_token, TOKEN_LENGTH, "%s", token);
     snprintf(_tlg_api, TELEGRAM_API_LENGTH, "/bot%s", _token);
@@ -89,6 +83,8 @@ uTLGBot::uTLGBot(const char* token, const bool dont_keep_connection)
     _last_received_msg = UINT64_MAX;
     _dont_keep_connection = dont_keep_connection;
     _debug_level = 0;
+    _tlg_api_ca_pem_start = NULL;
+    _tlg_api_ca_pem_end = NULL;
 
     // Clear message data
     clear_msg_data();
@@ -122,6 +118,15 @@ void uTLGBot::set_token(const char* token)
     snprintf(_token, TOKEN_LENGTH, "%s", token);
     snprintf(_tlg_api, TELEGRAM_API_LENGTH, "/bot%s", _token);
     _println(F("[Bot] Bot token changed."));
+}
+
+// Set/Modify Telegram Server Certificate
+void uTLGBot::set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end)
+{
+    _tlg_api_ca_pem_start = ca_pem_start;
+    _tlg_api_ca_pem_end = ca_pem_end;
+
+    _client->set_cert(_tlg_api_ca_pem_start, _tlg_api_ca_pem_end);
 }
 
 // Set/Modify Telegram getUpdates polling request timeout

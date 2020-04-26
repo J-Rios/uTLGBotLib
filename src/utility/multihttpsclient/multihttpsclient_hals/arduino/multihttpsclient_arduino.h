@@ -45,8 +45,10 @@ class MultiHTTPSClient
 {
     public:
         // Public Methods
-        MultiHTTPSClient(char* cert_https_api_telegram_org);
+        MultiHTTPSClient(void);
         void set_debug(const bool debug);
+        void set_cert(const char* cert_https_server);
+        void set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end);
         int8_t connect(const char* host, uint16_t port);
         void disconnect(void);
         bool is_connected(void);
@@ -60,12 +62,11 @@ class MultiHTTPSClient
         // Private Attributtes
         char _http_header[HTTP_HEADER_MAX_LENGTH];
         WiFiClientSecure* _client;
-        char* _cert_https_api_telegram_org;
+        const char* _cert_https_server;
         bool _connected;
         bool _debug;
         
         // Private Methods
-        bool init(void);
         void release_tls_elements(void);
         size_t write(const char* request);
         size_t read(char* response, const size_t response_len);

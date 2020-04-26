@@ -39,16 +39,15 @@
 
 /* Constructor */
 
-// MultiHTTPSClient constructor, initialize and setup secure client with the certificate
-MultiHTTPSClient::MultiHTTPSClient(char* cert_https_api_telegram_org)
+// MultiHTTPSClient constructor, initialize and setup secure client
+MultiHTTPSClient::MultiHTTPSClient(void)
 {
     _debug = false;
     _connected = false;
     _http_header[0] = '\0';
-    _client = NULL;
-    _cert_https_api_telegram_org = cert_https_api_telegram_org;
-
-    init();
+    _cert_https_server = NULL;
+    _client = new WiFiClientSecure();
+    set_cert(_cert_https_server);
 }
 
 /**************************************************************************************************/
@@ -59,6 +58,42 @@ MultiHTTPSClient::MultiHTTPSClient(char* cert_https_api_telegram_org)
 void MultiHTTPSClient::set_debug(const bool debug)
 {
     _debug = debug;
+}
+
+// Setup Server Certificate
+void MultiHTTPSClient::set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end)
+{
+    set_cert((const char*)ca_pem_start);
+}
+
+// Setup Server Certificate
+void MultiHTTPSClient::set_cert(const char* cert_https_server)
+{
+    _cert_https_server = cert_https_server;
+
+    // Let's do not use Server authenticy verification with Arduino for simplify Makers live
+#ifdef ESP8266
+    // ESP8266 doesn't have a hardware element for SSL/TLS acceleration, so it is really slow
+    // Let's ignore server authenticy verification and trust to get a fast response ¯\_(ツ)_/¯
+    _client->setInsecure();
+
+    /*
+    if(_cert_https_server != NULL)
+    {
+        // Reconfigure software watchdog timer to 8s for avoid server connection issues
+        ESP.wdtDisable();
+        ESP.wdtEnable(8000U);
+        _client->setCACert(_cert_https_server);
+        //_client->setFingerprint(_cert_https_server); // SHA-1 Fingerprint instead cert
+    }
+    else
+        _client->setInsecure();
+    */
+#else
+    // ESP32 has a hardware element for SSL/TLS acceleration, so it could be use
+    if(_cert_https_server != NULL)
+        _client->setCACert(_cert_https_server);
+#endif
 }
 
 // Make HTTPS client connection to server
@@ -161,28 +196,6 @@ uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_
 /**************************************************************************************************/
 
 /* Private Methods */
-
-bool MultiHTTPSClient::init(void)
-{
-    _client = new WiFiClientSecure();
-
-// Let's do not use Server authenticy verification with Arduino for simplify Makers live
-#ifdef ESP8266
-    // ESP8266 doesn't have a hardware element for SSL/TLS acceleration, so it is really slow
-    // Let's reconfigure software watchdog timer to 8s for avoid server connection issues
-    // Let's ignore server authenticy verification and trust to get a fast response ¯\_(ツ)_/¯
-    //ESP.wdtDisable();
-    //ESP.wdtEnable(8000U);
-    //_client->setFingerprint(_cert_https_api_telegram_org);
-    _client->setInsecure();
-#else
-    // ESP32 has a hardware element for SSL/TLS acceleration, so it could be use
-    //_client->setCACert(_cert_https_api_telegram_org);
-    //_client->setFingerprint(_cert_https_api_telegram_org);
-#endif
-
-    return true;
-}
 
 // Release all mbedtls context
 void MultiHTTPSClient::release_tls_elements(void)

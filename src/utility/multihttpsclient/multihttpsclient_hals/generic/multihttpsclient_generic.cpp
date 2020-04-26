@@ -51,12 +51,12 @@ clock_t _millis_t0 = clock();
 /* Constructor & Destructor */
 
 // MultiHTTPSClient constructor, initialize and setup secure client with the certificate
-MultiHTTPSClient::MultiHTTPSClient(char* cert_https_api_telegram_org)
+MultiHTTPSClient::MultiHTTPSClient(void)
 {
     _debug = false;
     _connected = false;
     _http_header[0] = '\0';
-    _cert_https_api_telegram_org = cert_https_api_telegram_org;
+    _cert_https_server = NULL;
 
     init();
 }
@@ -76,6 +76,24 @@ MultiHTTPSClient::~MultiHTTPSClient(void)
 void MultiHTTPSClient::set_debug(const bool debug)
 {
     _debug = debug;
+}
+
+// Setup Server Certificate
+void MultiHTTPSClient::set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end)
+{
+    set_cert((const char*)ca_pem_start);
+}
+
+// Setup Server Certificate
+void MultiHTTPSClient::set_cert(const char* cert_https_server)
+{
+    _cert_https_server = cert_https_server;
+
+    // Release all mbedtls context
+    release_tls_elements();
+
+    // Initialize again the mbedtls context
+    init();
 }
 
 // Make HTTPS client connection to server
@@ -136,12 +154,15 @@ int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
 
     // Verify server certificate
     uint32_t flags;
-    if((flags = mbedtls_ssl_get_verify_result(&_tls)) != 0)
+    if(_cert_https_server != NULL)
     {
-        char vrfy_buf[512];
-        mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "  ! ", flags);
-        _printf("[HTTPS] Warning: Invalid Server Certificate.\n%s\n", vrfy_buf);
-        return -1;
+        if((flags = mbedtls_ssl_get_verify_result(&_tls)) != 0)
+        {
+            char vrfy_buf[512];
+            mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "  ! ", flags);
+            _printf("[HTTPS] Warning: Invalid Server Certificate.\n%s\n", vrfy_buf);
+            return -1;
+        }
     }
 
     // Connection stablished and certificate verified
@@ -247,7 +268,7 @@ uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_
 
 bool MultiHTTPSClient::init(void)
 {
-    static const char* entropy_generation_key = "tsl_client\0";
+    static const char* entropy_generation_key = "tls_client\0";
     int ret = 1;
 
     // Initialization
@@ -266,13 +287,16 @@ bool MultiHTTPSClient::init(void)
     }
 
     // Load Certificate
-    ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)_cert_https_api_telegram_org, 
-        strlen(_cert_https_api_telegram_org)+1);
-    if(ret < 0)
+    if(_cert_https_server != NULL)
     {
-        printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
-        printf("mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
-        return false;
+        ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)_cert_https_server, 
+            strlen(_cert_https_server)+1);
+        if(ret < 0)
+        {
+            printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
+            printf("mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
+            return false;
+        }
     }
 
     return true;
