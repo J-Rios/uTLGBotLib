@@ -47,6 +47,9 @@ MultiHTTPSClient::MultiHTTPSClient(void)
     _http_header[0] = '\0';
     _cert_https_server = NULL;
     _client = new WiFiClientSecure();
+    #ifdef ESP8266
+        _cert = NULL;
+    #endif
     set_cert(_cert_https_server);
 }
 
@@ -71,24 +74,19 @@ void MultiHTTPSClient::set_cert(const char* cert_https_server)
 {
     _cert_https_server = cert_https_server;
 
-    // Let's do not use Server authenticy verification with Arduino for simplify Makers live
 #ifdef ESP8266
-    // ESP8266 doesn't have a hardware element for SSL/TLS acceleration, so it is really slow
-    // Let's ignore server authenticy verification and trust to get a fast response ¯\_(ツ)_/¯
-    _client->setInsecure();
-
-    /*
+    // ESP8266 doesn't have a hardware element for SSL/TLS acceleration
+    // Note for users: Don't set a cert to ignore server authenticy and trust verification
+    // to get a faster response
     if(_cert_https_server != NULL)
     {
-        // Reconfigure software watchdog timer to 8s for avoid server connection issues
-        ESP.wdtDisable();
-        ESP.wdtEnable(8000U);
-        _client->setCACert(_cert_https_server);
-        //_client->setFingerprint(_cert_https_server); // SHA-1 Fingerprint instead cert
+        if(_cert != NULL)
+            delete(_cert);
+        _cert = new X509List(_cert_https_server);
+        _client->setTrustAnchors(_cert);
     }
     else
         _client->setInsecure();
-    */
 #else
     // ESP32 has a hardware element for SSL/TLS acceleration, so it could be use
     if(_cert_https_server != NULL)
@@ -102,6 +100,20 @@ int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
     int8_t conn_result = _client->connect(host, port);
     if(conn_result)
         _connected = true;
+    else
+    {
+        // Connection fail, if we are in ESP8266 and cert is configured
+        #ifdef ESP8266
+            if(_cert_https_server != NULL)
+            {
+                // Set system clock from a NTP server to verify certs
+                setClock();
+                conn_result = _client->connect(host, port);
+                if(conn_result)
+                    _connected = true;
+            }
+        #endif
+    }
     return conn_result;
 }
 
@@ -297,6 +309,28 @@ uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_ma
     }
 
     return 0;
+}
+
+// Set time via NTP, as required for x.509 validation
+void MultiHTTPSClient::setClock(void)
+{
+#ifdef ESP8266
+    time_t now;
+    struct tm timeinfo;
+
+    configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+    Serial.println("Waiting for NTP time sync.");
+    now = time(nullptr);
+    while(now < 8*3600*2)
+    {
+        delay(500);
+        Serial.println("...");
+        now = time(nullptr);
+    }
+    gmtime_r(&now, &timeinfo);
+    Serial.print("Current time: ");
+    Serial.print(asctime(&timeinfo));
+#endif
 }
 
 /**************************************************************************************************/

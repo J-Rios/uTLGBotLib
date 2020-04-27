@@ -62,6 +62,9 @@ class MultiHTTPSClient
         // Private Attributtes
         char _http_header[HTTP_HEADER_MAX_LENGTH];
         WiFiClientSecure* _client;
+        #ifdef ESP8266
+            X509List* _cert;
+        #endif
         const char* _cert_https_server;
         bool _connected;
         bool _debug;
@@ -72,6 +75,7 @@ class MultiHTTPSClient
         size_t read(char* response, const size_t response_len);
         uint8_t read_response(char* response, const size_t response_max_len, 
                 const unsigned long response_timeout);
+        void setClock(void);
 };
 
 /**************************************************************************************************/
