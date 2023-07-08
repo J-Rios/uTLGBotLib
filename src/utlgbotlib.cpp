@@ -133,7 +133,7 @@ void uTLGBot::set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end)
 void uTLGBot::set_polling_timeout(const uint8_t seconds)
 {
     _long_poll_timeout = seconds;
-    _printf("[Bot] Bot getUpdate request polling timeout changed to %" PRIu8 "s.\n", 
+    _printf("[Bot] Bot getUpdate request polling timeout changed to %" PRIu8 "s.\n",
         _long_poll_timeout);
 }
 
@@ -203,7 +203,7 @@ uint8_t uTLGBot::getMe(void)
 {
     uint8_t request_result;
     bool connected;
-    
+
     // Connect to telegram server
     connected = is_connected();
     if(!connected)
@@ -212,11 +212,11 @@ uint8_t uTLGBot::getMe(void)
         if(!connected)
             return false;
     }
-    
+
     // Send the request
     _println(F("[Bot] Trying to send getMe request..."));
     request_result = tlg_get(API_CMD_GET_ME, _buffer, HTTP_MAX_RES_LENGTH);
-    
+
     // Check if request has fail
     if(request_result == 0)
     {
@@ -225,7 +225,7 @@ uint8_t uTLGBot::getMe(void)
         // Disconnect from telegram server
         if(is_connected())
             disconnect();
-            
+
         return false;
     }
 
@@ -242,7 +242,7 @@ uint8_t uTLGBot::getMe(void)
 }
 
 // Request Bot send a reply keyboard markup
-uint8_t uTLGBot::sendReplyKeyboardMarkup(const char* chat_id, const char* text, 
+uint8_t uTLGBot::sendReplyKeyboardMarkup(const char* chat_id, const char* text,
     const char* keyboard)
 {
     snprintf(json_keyboard, MAX_KEYBOARD_MARKUP_LENGTH, "{\"keyboard\":%s}", keyboard);
@@ -250,16 +250,16 @@ uint8_t uTLGBot::sendReplyKeyboardMarkup(const char* chat_id, const char* text,
 }
 
 // Request Bot send text message to specified chat ID (The Bot should be in that Chat)
-uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* parse_mode, 
-    bool disable_web_page_preview, bool disable_notification, uint64_t reply_to_message_id, 
+uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* parse_mode,
+    bool disable_web_page_preview, bool disable_notification, uint64_t reply_to_message_id,
     const char* reply_markup)
 {
-    // Note: Due to undefined behavior if use same source and target in snprintf(), we need to 
+    // Note: Due to undefined behavior if use same source and target in snprintf(), we need to
     // use a temporary copy array (dont trust strncat)
     char tmp[MAX_TMP_BUFFER_LENGTH];
     uint8_t request_result;
     bool connected;
-    
+
     // Connect to telegram server
     connected = is_connected();
     if(!connected)
@@ -268,9 +268,10 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
         if(!connected)
             return false;
     }
-    
+
     // Create HTTP Body request data
-    snprintf_P(_buffer, HTTP_MAX_RES_LENGTH, PSTR("{\"chat_id\":%s, \"text\":\"%s\"}"), chat_id, text);
+    snprintf_P(_buffer, HTTP_MAX_RES_LENGTH, PSTR("{\"chat_id\":%s, \"text\":\"%s\"}"),
+        chat_id, text);
     // If parse_mode is not empty
     if(parse_mode[0] != '\0')
     {
@@ -293,7 +294,7 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
     if(disable_web_page_preview)
     {
         _buffer[strlen(_buffer)-1] = '\0';
-        if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, ",\"disable_web_page_preview\":true}", 
+        if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, ",\"disable_web_page_preview\":true}",
             strlen(",\"disable_web_page_preview\":true}")))
         {
             cant_create_send_msg(_buffer);
@@ -304,7 +305,7 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
     if(disable_notification)
     {
         _buffer[strlen(_buffer)-1] = '\0';
-        if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, ",\"disable_notification\":true}", 
+        if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, ",\"disable_notification\":true}",
             strlen(",\"disable_notification\":true}")))
         {
             cant_create_send_msg(_buffer);
@@ -315,7 +316,7 @@ uint8_t uTLGBot::sendMessage(const char* chat_id, const char* text, const char* 
     if(reply_to_message_id != 0)
     {
         _buffer[strlen(_buffer)-1] = '\0';
-        snprintf_P(tmp, MAX_TMP_BUFFER_LENGTH, PSTR(",\"reply_to_message_id\":%" PRIu64 "}"), 
+        snprintf_P(tmp, MAX_TMP_BUFFER_LENGTH, PSTR(",\"reply_to_message_id\":%" PRIu64 "}"),
             reply_to_message_id);
         if(!cstr_strncat(_buffer, HTTP_MAX_RES_LENGTH, tmp, strlen(tmp)))
         {
@@ -383,7 +384,7 @@ uint8_t uTLGBot::getUpdates(void)
 
     // Create HTTP Body request data (Note that we limit messages to 1 and just allow text messages)
     snprintf_P(_buffer, HTTP_MAX_RES_LENGTH, PSTR("{\"offset\":%" PRIu64 ", \"limit\":1, " \
-        "\"timeout\":%" PRIu8 ", \"allowed_updates\":[\"message\"]}"), _last_received_msg, 
+        "\"timeout\":%" PRIu8 ", \"allowed_updates\":[\"message\"]}"), _last_received_msg,
         _long_poll_timeout);
 
     // Send the request
@@ -391,7 +392,7 @@ uint8_t uTLGBot::getUpdates(void)
     _println(F("Mesage to send:"));
     _println(_buffer);
     _println("");
-    request_result = tlg_post(API_CMD_GET_UPDATES, _buffer, strlen(_buffer), HTTP_MAX_RES_LENGTH, 
+    request_result = tlg_post(API_CMD_GET_UPDATES, _buffer, strlen(_buffer), HTTP_MAX_RES_LENGTH,
         (_long_poll_timeout*1000)+HTTP_WAIT_RESPONSE_TIMEOUT);
 
     // Check if request has fail
@@ -456,7 +457,7 @@ uint8_t uTLGBot::getUpdates(void)
     memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
 
     // Parse message string as JSON and get each element
-    num_elements = json_parse_str(ptr_response, strlen(ptr_response), _json_elements, 
+    num_elements = json_parse_str(ptr_response, strlen(ptr_response), _json_elements,
         MAX_JSON_ELEMENTS);
     if(num_elements == 0)
     {
@@ -468,7 +469,7 @@ uint8_t uTLGBot::getUpdates(void)
         // Disconnect from telegram server
         if(_dont_keep_connection && is_connected())
             disconnect();
-        
+
         return 0;
     }
 
@@ -477,23 +478,23 @@ uint8_t uTLGBot::getUpdates(void)
     if(key_position != 0)
     {
         // Get json element string
-        json_get_element_string(ptr_response, &_json_elements[key_position+1], 
+        json_get_element_string(ptr_response, &_json_elements[key_position+1],
             _json_value_str, MAX_JSON_STR_LEN);
 
         // Save value in variable
         sscanf(_json_value_str, "%" SCNu64, &_last_received_msg);
-        
+
         // Prepare variable to next update message request (offset)
         _last_received_msg = _last_received_msg + 1;
     }
 
     // Check and get value of key: message_id
-    key_position = json_has_key(ptr_response, _json_elements, num_elements, 
+    key_position = json_has_key(ptr_response, _json_elements, num_elements,
         "message_id");
     if(key_position != 0)
     {
         // Get json element string
-        json_get_element_string(ptr_response, &_json_elements[key_position+1], 
+        json_get_element_string(ptr_response, &_json_elements[key_position+1],
             _json_value_str, MAX_JSON_STR_LEN);
 
         // Save value in variable
@@ -505,7 +506,7 @@ uint8_t uTLGBot::getUpdates(void)
     if(key_position != 0)
     {
         // Get json element string
-        json_get_element_string(ptr_response, &_json_elements[key_position+1], 
+        json_get_element_string(ptr_response, &_json_elements[key_position+1],
             _json_value_str, MAX_JSON_STR_LEN);
 
         // Save value in variable
@@ -517,7 +518,7 @@ uint8_t uTLGBot::getUpdates(void)
     if(key_position != 0)
     {
         // Get json element string
-        json_get_element_string(ptr_response, &_json_elements[key_position+1], 
+        json_get_element_string(ptr_response, &_json_elements[key_position+1],
         _json_value_str, MAX_JSON_STR_LEN);
 
         // Save value in variable
@@ -529,24 +530,24 @@ uint8_t uTLGBot::getUpdates(void)
     if(key_position != 0)
     {
         // Get json element string
-        json_get_element_string(ptr_response, &_json_elements[key_position+1], 
+        json_get_element_string(ptr_response, &_json_elements[key_position+1],
             _json_value_str, MAX_JSON_STR_LEN);
 
         // Parse string "from" content as JSON and get each element
-        num_subelements = json_parse_str(_json_value_str, strlen(_json_value_str), 
+        num_subelements = json_parse_str(_json_value_str, strlen(_json_value_str),
             _json_subelements, MAX_JSON_SUBELEMENTS);
         if(num_subelements == 0)
             _println(F("[Bot] Error: Bad JSON sintax in \"from\" element."));
         else
         {
             // Check and get value of key: id
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "id");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, 
-                    &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str,
+                    &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
@@ -554,13 +555,13 @@ uint8_t uTLGBot::getUpdates(void)
             }
 
             // Check and get value of key: is_bot
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "is_bot");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, 
-                    &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str,
+                    &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
@@ -571,62 +572,62 @@ uint8_t uTLGBot::getUpdates(void)
             }
 
             // Check and get value of key: first_name
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "first_name");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, 
-                    &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str,
+                    &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.from.first_name, MAX_USER_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.from.first_name, MAX_USER_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: last_name
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "last_name");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, 
-                    &_json_subelements[key_position+1], _json_subvalue_str, 
+                json_get_element_string(_json_value_str,
+                    &_json_subelements[key_position+1], _json_subvalue_str,
                     MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.from.last_name, MAX_USER_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.from.last_name, MAX_USER_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: username
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "username");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, 
-                    &_json_subelements[key_position+1], _json_subvalue_str, 
+                json_get_element_string(_json_value_str,
+                    &_json_subelements[key_position+1], _json_subvalue_str,
                     MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.from.username, MAX_USERNAME_LENGTH, PSTR("@%s"), 
+                snprintf_P(received_msg.from.username, MAX_USERNAME_LENGTH, PSTR("@%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: language_code
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "language_code");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, 
-                    &_json_subelements[key_position+1], _json_subvalue_str, 
+                json_get_element_string(_json_value_str,
+                    &_json_subelements[key_position+1], _json_subvalue_str,
                     MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.from.language_code, MAX_LANGUAGE_CODE_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.from.language_code, MAX_LANGUAGE_CODE_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
         }
@@ -637,107 +638,107 @@ uint8_t uTLGBot::getUpdates(void)
     if(key_position != 0)
     {
         // Get json element string
-        json_get_element_string(ptr_response, &_json_elements[key_position+1], 
+        json_get_element_string(ptr_response, &_json_elements[key_position+1],
             _json_value_str, MAX_JSON_STR_LEN);
 
         // Parse string "from" content as JSON and get each element
-        num_subelements = json_parse_str(_json_value_str, strlen(_json_value_str), 
+        num_subelements = json_parse_str(_json_value_str, strlen(_json_value_str),
             _json_subelements, MAX_JSON_ELEMENTS);
         if(num_subelements == 0)
             _println(F("[Bot] Error: Bad JSON sintax in \"from\" element."));
         else
         {
             // Check and get value of key: id
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "id");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.chat.id, MAX_ID_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.chat.id, MAX_ID_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: type
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "type");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.chat.type, MAX_CHAT_TYPE_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.chat.type, MAX_CHAT_TYPE_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: title
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "title");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.chat.title, MAX_CHAT_TITLE_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.chat.title, MAX_CHAT_TITLE_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: username
-            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements,
                 "username");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.chat.username, MAX_USERNAME_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.chat.username, MAX_USERNAME_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: first_name
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "first_name");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.chat.first_name, MAX_USER_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.chat.first_name, MAX_USER_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: last_name
-            key_position = json_has_key(_json_value_str, _json_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements,
                 num_subelements, "last_name");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
-                snprintf_P(received_msg.chat.last_name, MAX_USER_LENGTH, PSTR("%s"), 
+                snprintf_P(received_msg.chat.last_name, MAX_USER_LENGTH, PSTR("%s"),
                     _json_subvalue_str);
             }
 
             // Check and get value of key: is_bot
-            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements, 
+            key_position = json_has_key(_json_value_str, _json_subelements, num_subelements,
                 "all_members_are_administrators");
             if(key_position != 0)
             {
                 // Get json element string
-                json_get_element_string(_json_value_str, &_json_subelements[key_position+1], 
+                json_get_element_string(_json_value_str, &_json_subelements[key_position+1],
                     _json_subvalue_str, MAX_JSON_SUBVAL_STR_LEN);
 
                 // Save value in variable
@@ -752,7 +753,7 @@ uint8_t uTLGBot::getUpdates(void)
     // Disconnect from telegram server
     if(_dont_keep_connection && is_connected())
         disconnect();
-    
+
     return 1;
 }
 
@@ -761,7 +762,7 @@ uint8_t uTLGBot::getUpdates(void)
 /* Telegram API GET and POST Methods */
 
 // Make and send a HTTP GET request
-uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t response_len, 
+uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t response_len,
     const unsigned long response_timeout)
 {
     char* response_init_pos = response;
@@ -839,7 +840,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
 }
 
 // Make and send a HTTP GET request
-uint8_t uTLGBot::tlg_post(const char* command, char* request_response, const size_t request_len, 
+uint8_t uTLGBot::tlg_post(const char* command, char* request_response, const size_t request_len,
     const size_t request_response_max_size, const unsigned long response_timeout)
 {
     char* response_init_pos = request_response;
@@ -849,7 +850,7 @@ uint8_t uTLGBot::tlg_post(const char* command, char* request_response, const siz
 
     // Create URI and send POST request
     snprintf_P(uri, HTTP_MAX_URI_LENGTH, PSTR("%s/%s"), _tlg_api, command);
-    if(_client->post(uri, TELEGRAM_HOST, request_response, request_len, 
+    if(_client->post(uri, TELEGRAM_HOST, request_response, request_len,
         request_response_max_size, response_timeout) > 0)
     {
         return false;
@@ -859,7 +860,7 @@ uint8_t uTLGBot::tlg_post(const char* command, char* request_response, const siz
     request_response[strlen(request_response)-1] = '\0';
 
     // Check and remove response header (just keep response body)
-    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\r\n\r\n", 
+    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\r\n\r\n",
         strlen("\r\n\r\n"));
     if(pos == -1)
     {
@@ -873,7 +874,7 @@ uint8_t uTLGBot::tlg_post(const char* command, char* request_response, const siz
 
     // Check for and get request "ok" response key
     // Note: We are assumming "ok" attribute comes before "response" attribute
-    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\"ok\":", 
+    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\"ok\":",
         strlen("\"ok\":"));
     if(pos == -1)
     {
@@ -898,7 +899,7 @@ uint8_t uTLGBot::tlg_post(const char* command, char* request_response, const siz
     // Remove root json response and just keep "result" attribute json value in response buffer
     // i.e. for response: {"ok":true,"result":[{"id":123456789,"first_name":"esp8266_Bot"}]}
     // just keep: [{"id":123456789,"first_name":"esp8266_Bot"}]
-    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\"result\":", 
+    pos = cstr_get_substr_pos_end(request_response, strlen(request_response), "\"result\":",
         strlen("\"result\":"));
     if(pos == -1)
     {
@@ -960,7 +961,7 @@ void uTLGBot::cant_create_send_msg(const char* msg)
 }
 
 // Parse and get each json elements from provided json format string
-uint32_t uTLGBot::json_parse_str(const char* json_str, const size_t json_str_len, 
+uint32_t uTLGBot::json_parse_str(const char* json_str, const size_t json_str_len,
     jsmntok_t* json_tokens, const uint32_t json_tokens_len)
 {
     jsmn_parser json_parser;
@@ -989,7 +990,7 @@ uint32_t uTLGBot::json_parse_str(const char* json_str, const size_t json_str_len
 }
 
 // Check if given json object contains the provided key
-uint32_t uTLGBot::json_has_key(const char* json_str, jsmntok_t* json_tokens, 
+uint32_t uTLGBot::json_has_key(const char* json_str, jsmntok_t* json_tokens,
     const uint32_t num_tokens, const char* key)
 {
     for(uint32_t i = 0; i < num_tokens; i++)
@@ -1003,7 +1004,7 @@ uint32_t uTLGBot::json_has_key(const char* json_str, jsmntok_t* json_tokens,
             continue;
 
         // Check if key and json element string are the same
-        if(strncmp(json_str + json_tokens[i].start, key, 
+        if(strncmp(json_str + json_tokens[i].start, key,
             json_tokens[i].end - json_tokens[i].start) == 0)
         {
             return i;
@@ -1015,7 +1016,7 @@ uint32_t uTLGBot::json_has_key(const char* json_str, jsmntok_t* json_tokens,
 }
 
 // Get the corresponding string of given json element (token)
-void uTLGBot::json_get_element_string(const char* json_str, jsmntok_t* token, char* converted_str, 
+void uTLGBot::json_get_element_string(const char* json_str, jsmntok_t* token, char* converted_str,
     const uint32_t converted_str_len)
 {
     const char* value = json_str + token->start;
@@ -1034,7 +1035,7 @@ void uTLGBot::json_get_element_string(const char* json_str, jsmntok_t* token, ch
 }
 
 // Get the corresponding string value of given json key
-uint8_t uTLGBot::json_get_key_value(const char* key, const char* json_str, jsmntok_t* tokens, 
+uint8_t uTLGBot::json_get_key_value(const char* key, const char* json_str, jsmntok_t* tokens,
     const uint32_t num_tokens, char* converted_str, const uint32_t converted_str_len)
 {
     // Check for key
@@ -1046,17 +1047,17 @@ uint8_t uTLGBot::json_get_key_value(const char* key, const char* json_str, jsmnt
     }
     else
     {
-        json_get_element_string(json_str, &tokens[key_position+1], converted_str, 
+        json_get_element_string(json_str, &tokens[key_position+1], converted_str,
             converted_str_len);
     }
-    
+
     return true;
 }
 
 // Return the substring end position from given input string
 // Example: str=="Hello\r\nWorld." substr=="\r\n" -> result: 7
 // Return -1 if substring is not found
-int32_t uTLGBot::cstr_get_substr_pos_end(char* str, const size_t str_len, const char* substr, 
+int32_t uTLGBot::cstr_get_substr_pos_end(char* str, const size_t str_len, const char* substr,
     const size_t substr_len)
 {
     int32_t position = -1;
@@ -1098,7 +1099,8 @@ void uTLGBot::cstr_rm_char(char* str, const size_t str_len, const char c_remove)
 }
 
 // Safe concatenate a substring to provided string
-bool uTLGBot::cstr_strncat(char* dest, const size_t dest_max_size, const char* src, const size_t src_len)
+bool uTLGBot::cstr_strncat(char* dest, const size_t dest_max_size, const char* src,
+        const size_t src_len)
 {
     bool rc = true;
     size_t dest_len = strlen(dest);

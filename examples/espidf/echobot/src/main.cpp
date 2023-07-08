@@ -1,6 +1,6 @@
 /**************************************************************************************************/
 // Example: echobot
-// Description: 
+// Description:
 //   Bot that response to any received text message with the same text received (echo messages).
 //   It gives you a basic idea of how to receive and send messages.
 // Created on: 21 apr. 2019
@@ -57,11 +57,11 @@ void app_main(void)
 {
     // Create Bot object
     uTLGBot Bot(TLG_TOKEN);
-    
+
     // Initialize Non-Volatile-Storage and WiFi station connection
     nvs_init();
     wifi_init_stat();
-    
+
     // Main loop
     while(1)
     {
@@ -84,7 +84,7 @@ void app_main(void)
             }
             printf("Send OK.\n\n");
         }
-        
+
         // Wait 1s for next iteration
         vTaskDelay(1000/portTICK_PERIOD_MS);
     }
@@ -197,7 +197,7 @@ static esp_err_t network_event_handler(void *ctx, system_event_t *e)
         default:
             break;
     }
-    
+
     return ESP_OK;
 }
 

@@ -1,6 +1,6 @@
 /**************************************************************************************************/
 // Example: echobot
-// Description: 
+// Description:
 //   Bot to control a LED through telegram commands.
 //   It gives you an idea of how to detect specific words from user message and response to it.
 //   Commands implemented are /start /help /ledon /ledoff /ledstatus
@@ -44,13 +44,13 @@
 #define PIN_LED 13
 
 // Telegram Bot /start text message
-const char TEXT_START[] = 
+const char TEXT_START[] =
     "Hello, im a Bot running in an ESP microcontroller that let you turn on/off a LED/light.\n"
     "\n"
     "Check /help command to see how to use me.";
 
 // Telegram Bot /help text message
-const char TEXT_HELP[] = 
+const char TEXT_HELP[] =
     "Available Commands:\n"
     "\n"
     "/start - Show start text.\n"

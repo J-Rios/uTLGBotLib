@@ -1,6 +1,6 @@
 /**************************************************************************************************/
 // Example: echobot
-// Description: 
+// Description:
 //   Bot that response to any received text message with the same text received (echo messages).
 //   It gives you a basic idea of how to receive and send messages.
 // Created on: 21 apr. 2019
@@ -37,18 +37,18 @@ int main(void)
 {
     // Create Bot object
     uTLGBot Bot(TLG_TOKEN);
-    
+
     // Main loop
     while(1)
     {
         // Check and handle any received message
         while(Bot.getUpdates())
         {
-            printf("Message received from %s at %s, sending it back.\n", 
+            printf("Message received from %s at %s, sending it back.\n",
                 Bot.received_msg.from.first_name, Bot.received_msg.chat.title);
             Bot.sendMessage(Bot.received_msg.chat.id, Bot.received_msg.text);
         }
-        
+
         // Wait 1s for next iteration
         _delay(1000);
     }

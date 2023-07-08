@@ -52,10 +52,10 @@ class MultiHTTPSClient
         int8_t connect(const char* host, uint16_t port);
         void disconnect(void);
         bool is_connected(void);
-        uint8_t get(const char* uri, const char* host, char* response, const size_t response_len, 
+        uint8_t get(const char* uri, const char* host, char* response, const size_t response_len,
                 const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
-        uint8_t post(const char* uri, const char* host, char* request_response, 
-                const size_t request_len, const size_t request_response_max_size, 
+        uint8_t post(const char* uri, const char* host, char* request_response,
+                const size_t request_len, const size_t request_response_max_size,
                 const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
     private:
@@ -68,12 +68,12 @@ class MultiHTTPSClient
         const char* _cert_https_server;
         bool _connected;
         bool _debug;
-        
+
         // Private Methods
         void release_tls_elements(void);
         size_t write(const char* request);
         size_t read(char* response, const size_t response_len);
-        uint8_t read_response(char* response, const size_t response_max_len, 
+        uint8_t read_response(char* response, const size_t response_max_len,
                 const unsigned long response_timeout);
         void setClock(void);
 };

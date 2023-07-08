@@ -1,6 +1,6 @@
 /**************************************************************************************************/
 // Example: echobot
-// Description: 
+// Description:
 //   Bot that response to any received text message with the same text received (echo messages).
 //   It gives you a basic idea of how to receive and send messages.
 // Created on: 21 apr. 2019

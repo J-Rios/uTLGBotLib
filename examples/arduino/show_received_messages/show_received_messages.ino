@@ -1,6 +1,6 @@
 /**************************************************************************************************/
 // Example: echobot
-// Description: 
+// Description:
 //   Bot that shows all received messages data through Serial.
 //   It shows you all data that is received and can be use from any received message.
 // Created on: 21 apr. 2019
@@ -98,24 +98,24 @@ void loop()
         Serial.printf("  From chat ID: %s\n", Bot.received_msg.chat.id);
         Serial.printf("  From chat type: %s\n", Bot.received_msg.chat.type);
         Serial.printf("  From chat alias: %s\n", Bot.received_msg.chat.username);
-        Serial.printf("  From chat name: %s %s\n", Bot.received_msg.chat.first_name, 
+        Serial.printf("  From chat name: %s %s\n", Bot.received_msg.chat.first_name,
             Bot.received_msg.chat.last_name);
         Serial.printf("  From chat title: %s\n", Bot.received_msg.chat.title);
         if(Bot.received_msg.chat.all_members_are_administrators)
             Serial.println("  From chat where all members are admins.");
         else
             Serial.println("  From chat where not all members are admins.");
-        
+
         Serial.printf("  From user ID: %s\n", Bot.received_msg.from.id);
         Serial.printf("  From user alias: %s\n", Bot.received_msg.from.username);
-        Serial.printf("  From user name: %s %s\n", Bot.received_msg.from.first_name, 
+        Serial.printf("  From user name: %s %s\n", Bot.received_msg.from.first_name,
             Bot.received_msg.from.last_name);
         Serial.printf("  From user with language code: %s\n", Bot.received_msg.from.language_code);
         if(Bot.received_msg.from.is_bot)
             Serial.println("  From user that is a Bot.");
         else
             Serial.println("  From user that is not a Bot.");
-        
+
         Serial.printf("  Message ID: %d\n", Bot.received_msg.message_id);
         Serial.printf("  Message sent date (UNIX epoch time): %ul\n", Bot.received_msg.date);
         Serial.printf("  Text: %s\n", Bot.received_msg.text);

@@ -132,7 +132,7 @@ bool MultiHTTPSClient::is_connected(void)
 }
 
 // Make and send a HTTP GET request
-uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response, 
+uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
         const size_t response_len, const unsigned long response_timeout)
 {
     // Lets use response buffer for make the request first (for the sake of save memory)
@@ -160,15 +160,15 @@ uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
     _println(F("[HTTPS] Waiting for response..."));
     rc = read_response(response, response_len, response_timeout);
     _printf("[HTTPS] Response: %s\n\n", response);
-    
+
     return rc;
 }
 
 // Make and send a HTTP POST request
 // Provide HTTP body in request_response argument
 // Argument request_response will be modified and returned as request response
-uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_response, 
-        const size_t request_len, const size_t request_response_max_size, 
+uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_response,
+        const size_t request_len, const size_t request_response_max_size,
         const unsigned long response_timeout)
 {
     uint8_t rc = 1;
@@ -176,7 +176,7 @@ uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_
     // Create header request
     snprintf_P(_http_header, HTTP_HEADER_MAX_LENGTH, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
         "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
-        "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n"), uri, 
+        "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n"), uri,
         host, (uint64_t)request_len);
 
     // Send request
@@ -243,7 +243,7 @@ size_t MultiHTTPSClient::read(char* response, const size_t response_len)
 }
 
 // HTTP Read Response
-uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_max_len, 
+uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_max_len,
         const unsigned long response_timeout)
 {
     unsigned long t0 = 0, t1 = 0, t2 = 0;
@@ -257,7 +257,7 @@ uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_ma
         t1 = _millis();
 
         // Check for overflow
-        // Note: Due Arduino millis() return an unsigned long instead specific size type, lets just 
+        // Note: Due Arduino millis() return an unsigned long instead specific size type, lets just
         // handle overflow by reseting counter (this time the timeout can be < 2*expected_timeout)
         if(t1 < t0)
         {

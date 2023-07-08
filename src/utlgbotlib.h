@@ -66,7 +66,7 @@
 #define TELEGRAM_HOST "api.telegram.org"
 #define TELEGRAM_SERVER_LENGTH 28
 
-// Bot token max lenght (Note: Actual token lenght is 46, but it seems was increased in the past, 
+// Bot token max lenght (Note: Actual token lenght is 46, but it seems was increased in the past,
 // so we set it to 64)
 #define TOKEN_LENGTH 64
 
@@ -206,10 +206,10 @@ class uTLGBot
         void disconnect(void);
         bool is_connected(void);
         uint8_t getMe(void);
-        uint8_t sendMessage(const char* chat_id, const char* text, const char* parse_mode="", 
-            bool disable_web_page_preview=false, bool disable_notification=false, 
+        uint8_t sendMessage(const char* chat_id, const char* text, const char* parse_mode="",
+            bool disable_web_page_preview=false, bool disable_notification=false,
             uint64_t reply_to_message_id=0, const char* reply_markup="");
-        uint8_t sendReplyKeyboardMarkup(const char* chat_id, const char* text, 
+        uint8_t sendReplyKeyboardMarkup(const char* chat_id, const char* text,
             const char* keyboard);
         uint8_t getUpdates(void);
 
@@ -232,26 +232,26 @@ class uTLGBot
         uint8_t _debug_level;
 
         // Private Methods
-        uint8_t tlg_get(const char* command, char* response, const size_t response_len, 
+        uint8_t tlg_get(const char* command, char* response, const size_t response_len,
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
-        uint8_t tlg_post(const char* command, char* request_response, const size_t request_len, 
-            const size_t request_response_max_size, 
+        uint8_t tlg_post(const char* command, char* request_response, const size_t request_len,
+            const size_t request_response_max_size,
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
         void clear_msg_data(void);
         void cant_create_send_msg(const char* msg);
-        uint32_t json_parse_str(const char* json_str, const size_t json_str_len, 
+        uint32_t json_parse_str(const char* json_str, const size_t json_str_len,
             jsmntok_t* json_tokens, const uint32_t json_tokens_len);
-        uint32_t json_has_key(const char* json_str, jsmntok_t* json_tokens, 
+        uint32_t json_has_key(const char* json_str, jsmntok_t* json_tokens,
             const uint32_t num_tokens, const char* key);
-        void json_get_element_string(const char* json_str, jsmntok_t* token, char* converted_str, 
+        void json_get_element_string(const char* json_str, jsmntok_t* token, char* converted_str,
             const uint32_t converted_str_len);
-        uint8_t json_get_key_value(const char* key, const char* json_str, jsmntok_t* tokens, 
+        uint8_t json_get_key_value(const char* key, const char* json_str, jsmntok_t* tokens,
             const uint32_t num_tokens, char* converted_str, const uint32_t converted_str_len);
-        int32_t cstr_get_substr_pos_end(char* str, const size_t str_len, const char* substr, 
+        int32_t cstr_get_substr_pos_end(char* str, const size_t str_len, const char* substr,
             const size_t substr_len);
         void cstr_rm_char(char* str, const size_t str_len, const char c_remove);
-        bool cstr_strncat(char* dest, const size_t dest_max_size, const char* src, 
+        bool cstr_strncat(char* dest, const size_t dest_max_size, const char* src,
             const size_t src_len);
 };
 

@@ -26,7 +26,7 @@ Bot.set_debug(2); // Bot+HTTPS debug msgs
 
 - Global define "UTLGBOT_NO_DEBUG" to disable build debug prints and save some flash and sram memory usage.
 
-- Global define "UTLGBOT_MEMORY_LEVEL" with values 0 to 5, to set library build memory usage level. It allows to reduce library flash and sram memory needs by reducing HTTPS response buffer length and maximum telegram text messages length buffer. 
+- Global define "UTLGBOT_MEMORY_LEVEL" with values 0 to 5, to set library build memory usage level. It allows to reduce library flash and sram memory needs by reducing HTTPS response buffer length and maximum telegram text messages length buffer.
 ```
 -DUTLGBOT_MEMORY_LEVEL=0 // Max TLG msgs:  128 chars
 -DUTLGBOT_MEMORY_LEVEL=1 // Max TLG msgs:  256 chars

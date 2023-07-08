@@ -112,7 +112,7 @@ int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
     }
 
     // Set SSL/TLS configuration
-    if((ret = mbedtls_ssl_config_defaults(&_tls_cfg, MBEDTLS_SSL_IS_CLIENT, 
+    if((ret = mbedtls_ssl_config_defaults(&_tls_cfg, MBEDTLS_SSL_IS_CLIENT,
         MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
     {
         _printf("[HTTPS] Error: Can't connect to server ");
@@ -194,7 +194,7 @@ bool MultiHTTPSClient::is_connected(void)
 }
 
 // Make and send a HTTP GET request
-uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response, 
+uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
         const size_t response_len, const unsigned long response_timeout)
 {
     // Lets use response buffer for make the request first (for the sake of save memory)
@@ -227,8 +227,8 @@ uint8_t MultiHTTPSClient::get(const char* uri, const char* host, char* response,
 // Make and send a HTTP POST request
 // Provide HTTP body in request_response argument
 // Argument request_response will be modified and returned as request response
-uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_response, 
-        const size_t request_len, const size_t request_response_max_size, 
+uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_response,
+        const size_t request_len, const size_t request_response_max_size,
         const unsigned long response_timeout)
 {
     uint8_t rc = 0;
@@ -236,7 +236,7 @@ uint8_t MultiHTTPSClient::post(const char* uri, const char* host, char* request_
     // Create header request
     snprintf_P(_http_header, HTTP_HEADER_MAX_LENGTH, PSTR("POST %s HTTP/1.1\r\nHost: %s\r\n" \
         "User-Agent: MultiHTTPSClient\r\nAccept: text/html,application/xml,application/json" \
-        "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n"), uri, 
+        "\r\nContent-Type: application/json\r\nContent-Length: %" PRIu64 "\r\n\r\n"), uri,
         host, (uint64_t)request_len);
 
     // Send request
@@ -278,7 +278,7 @@ bool MultiHTTPSClient::init(void)
     mbedtls_x509_crt_init(&_cacert);
     mbedtls_ctr_drbg_init(&_ctr_drbg);
     mbedtls_entropy_init(&_entropy);
-    if((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg, mbedtls_entropy_func, &_entropy, 
+    if((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg, mbedtls_entropy_func, &_entropy,
         (const unsigned char*)entropy_generation_key, strlen(entropy_generation_key))) != 0)
     {
         printf("[HTTPS] Error: Cannot initialize HTTPS client. ");
@@ -289,7 +289,7 @@ bool MultiHTTPSClient::init(void)
     // Load Certificate
     if(_cert_https_server != NULL)
     {
-        ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)_cert_https_server, 
+        ret = mbedtls_x509_crt_parse(&_cacert, (const unsigned char*)_cert_https_server,
             strlen(_cert_https_server)+1);
         if(ret < 0)
         {
@@ -360,7 +360,7 @@ _printf("OK\n");
 
 
 // HTTP Read Response
-uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_max_len, 
+uint8_t MultiHTTPSClient::read_response(char* response, const size_t response_max_len,
         const unsigned long response_timeout)
 {
     size_t rc = 0;
