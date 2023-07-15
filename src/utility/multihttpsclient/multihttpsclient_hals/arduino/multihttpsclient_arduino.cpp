@@ -77,12 +77,11 @@ void MultiHTTPSClient::set_cert(const char* cert_https_server)
     {
         #ifdef ESP8266
             // ESP8266 doesn't have a hardware element for SSL/TLS acceleration
-            // Note for users: Don't set a cert to ignore server authenticy and trust verification
-            // to get a faster response
+            // This means that it will cost in memory and will be slow
             _cert.append(_cert_https_server);
             _client.setTrustAnchors(&_cert);
         #else
-            // ESP32 has a hardware element for SSL/TLS acceleration, so it could be use
+            // ESP32 has a hardware element for SSL/TLS acceleration
             _client.setCACert(_cert_https_server);
         #endif
     }
@@ -112,9 +111,6 @@ int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
             }
         #endif
     }
-
-    if(_connected == false)
-    {   _printf("[HTTPS] Error: Connection fail (%d)\n", (int)(conn_result));   }
 
     return _connected;
 }
