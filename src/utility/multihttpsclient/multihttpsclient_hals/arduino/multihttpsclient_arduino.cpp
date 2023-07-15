@@ -46,6 +46,9 @@ MultiHTTPSClient::MultiHTTPSClient(void)
     _connected = false;
     _http_header[0] = '\0';
     _cert_https_server = NULL;
+#if defined(ESP8266)
+    _client.setBufferSizes(512, 512);
+#endif
     set_cert(_cert_https_server);
 }
 
