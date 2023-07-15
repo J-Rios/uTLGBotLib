@@ -214,7 +214,7 @@ class uTLGBot
 
     private:
         // Private Attributtes
-        MultiHTTPSClient* _client;
+        MultiHTTPSClient _client;
         const uint8_t* _tlg_api_ca_pem_start;
         const uint8_t* _tlg_api_ca_pem_end;
         uint8_t _long_poll_timeout;

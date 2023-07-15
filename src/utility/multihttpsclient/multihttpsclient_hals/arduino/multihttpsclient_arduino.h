@@ -61,9 +61,9 @@ class MultiHTTPSClient
     private:
         // Private Attributtes
         char _http_header[HTTP_HEADER_MAX_LENGTH];
-        WiFiClientSecure* _client;
+        WiFiClientSecure _client;
         #ifdef ESP8266
-            X509List* _cert;
+            X509List _cert;
         #endif
         const char* _cert_https_server;
         bool _connected;

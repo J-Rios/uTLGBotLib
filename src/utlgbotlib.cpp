@@ -70,8 +70,6 @@
 // TLGBot constructor, initialize and setup secure client with telegram cert and get the token
 uTLGBot::uTLGBot(const char* token, const bool dont_keep_connection)
 {
-    _client = new MultiHTTPSClient();
-
     snprintf(_token, TOKEN_LENGTH, "%s", token);
     snprintf(_tlg_api, TELEGRAM_API_LENGTH, "/bot%s", _token);
     memset(_buffer, '\0', HTTP_MAX_RES_LENGTH);
@@ -90,15 +88,9 @@ uTLGBot::uTLGBot(const char* token, const bool dont_keep_connection)
     clear_msg_data();
 }
 
-// TLGBot destructor, free all resources
-#if defined(WIN32) || defined(_WIN32) || defined(__linux__) // Native System (Windows, Linux)
-    uTLGBot::~uTLGBot(void)
-    {
-        // Just release resources in uC based systems
-        delete _client;
-        _client = NULL;
-    }
-#endif
+// TLGBot destructor
+uTLGBot::~uTLGBot(void)
+{}
 
 /**************************************************************************************************/
 
@@ -109,7 +101,7 @@ void uTLGBot::set_debug(const uint8_t debug_level)
 {
     _debug_level = debug_level;
     if(_debug_level > 1)
-        _client->set_debug(true);
+        _client.set_debug(true);
 }
 
 // Set/Modify actual Bot Token
@@ -126,13 +118,13 @@ void uTLGBot::set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end)
     _tlg_api_ca_pem_start = ca_pem_start;
     _tlg_api_ca_pem_end = ca_pem_end;
 
-    _client->set_cert(_tlg_api_ca_pem_start, _tlg_api_ca_pem_end);
+    _client.set_cert(_tlg_api_ca_pem_start, _tlg_api_ca_pem_end);
 }
 
 // Set/Modify Telegram Server Certificate
 void uTLGBot::set_cert(const char* cert_https_server)
 {
-    _client->set_cert(cert_https_server);
+    _client.set_cert(cert_https_server);
 }
 
 // Set/Modify Telegram getUpdates polling request timeout
@@ -166,7 +158,7 @@ uint8_t uTLGBot::connect(void)
         return true;
     }
 
-    int8_t conn_res = _client->connect(TELEGRAM_HOST, HTTPS_PORT);
+    int8_t conn_res = _client.connect(TELEGRAM_HOST, HTTPS_PORT);
     if(conn_res == -1)
     {
         // Force disconnect if connection result is -1 (Unexpected Server certificate)
@@ -193,7 +185,7 @@ void uTLGBot::disconnect(void)
         _println(F("[Bot] Already disconnected from server."));
         return;
     }
-    _client->disconnect();
+    _client.disconnect();
 
     _println(F("[Bot] Successfully disconnected."));
 }
@@ -201,7 +193,7 @@ void uTLGBot::disconnect(void)
 // Check for Bot connection to server status
 bool uTLGBot::is_connected(void)
 {
-    return _client->is_connected();
+    return _client.is_connected();
 }
 
 // Request Bot info by sending getMe command
@@ -778,7 +770,7 @@ uint8_t uTLGBot::tlg_get(const char* command, char* response, const size_t respo
 
     // Create URI and send GET request
     snprintf_P(uri, HTTP_MAX_URI_LENGTH, PSTR("%s/%s"), _tlg_api, command);
-    if(_client->get(uri, TELEGRAM_HOST, response, response_len, response_timeout) > 0)
+    if(_client.get(uri, TELEGRAM_HOST, response, response_len, response_timeout) > 0)
         return false;
 
     // Remove last character
@@ -856,7 +848,7 @@ uint8_t uTLGBot::tlg_post(const char* command, char* request_response, const siz
 
     // Create URI and send POST request
     snprintf_P(uri, HTTP_MAX_URI_LENGTH, PSTR("%s/%s"), _tlg_api, command);
-    if(_client->post(uri, TELEGRAM_HOST, request_response, request_len,
+    if(_client.post(uri, TELEGRAM_HOST, request_response, request_len,
         request_response_max_size, response_timeout) > 0)
     {
         return false;

@@ -46,10 +46,6 @@ MultiHTTPSClient::MultiHTTPSClient(void)
     _connected = false;
     _http_header[0] = '\0';
     _cert_https_server = NULL;
-    _client = new WiFiClientSecure();
-    #ifdef ESP8266
-        _cert = NULL;
-    #endif
     set_cert(_cert_https_server);
 }
 
@@ -80,54 +76,58 @@ void MultiHTTPSClient::set_cert(const char* cert_https_server)
     // to get a faster response
     if(_cert_https_server != NULL)
     {
-        if(_cert != NULL)
-            delete(_cert);
-        _cert = new X509List(_cert_https_server);
-        _client->setTrustAnchors(_cert);
+        _cert.append(_cert_https_server);
+        _client.setTrustAnchors(&_cert);
     }
     else
-        _client->setInsecure();
+        _client.setInsecure();
 #else
     // ESP32 has a hardware element for SSL/TLS acceleration, so it could be use
     if(_cert_https_server != NULL)
-        _client->setCACert(_cert_https_server);
+        _client.setCACert(_cert_https_server);
 #endif
 }
 
 // Make HTTPS client connection to server
 int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
 {
-    int8_t conn_result = _client->connect(host, port);
+    int8_t conn_result = _client.connect(host, port);
     if(conn_result)
         _connected = true;
     else
     {
+        _connected = false;
+
         // Connection fail, if we are in ESP8266 and cert is configured
         #ifdef ESP8266
             if(_cert_https_server != NULL)
             {
                 // Set system clock from a NTP server to verify certs
                 setClock();
-                conn_result = _client->connect(host, port);
+                conn_result = _client.connect(host, port);
                 if(conn_result)
                     _connected = true;
             }
         #endif
     }
-    return conn_result;
+
+    if(_connected == false)
+    {   _printf("[HTTPS] Error: Connection fail (%d)\n", (int)(conn_result));   }
+
+    return _connected;
 }
 
 // HTTPS client disconnect from server
 void MultiHTTPSClient::disconnect(void)
 {
-    _client->stop();
+    _client.stop();
     _connected = false;
 }
 
 // Check if HTTPS client is connected
 bool MultiHTTPSClient::is_connected(void)
 {
-    _connected = _client->connected();
+    _connected = _client.connected();
     return _connected;
 }
 
@@ -218,7 +218,7 @@ void MultiHTTPSClient::release_tls_elements(void)
 // HTTPS Write
 size_t MultiHTTPSClient::write(const char* request)
 {
-    return _client->print(request);
+    return _client.print(request);
 }
 
 // HTTPS Read
@@ -227,9 +227,9 @@ size_t MultiHTTPSClient::read(char* response, const size_t response_len)
     char c;
     size_t i = 0;
 
-    while(_client->available())
+    while(_client.available())
     {
-        c = _client->read();
+        c = _client.read();
         if(i < response_len-1)
         {
             response[i] = c;
