@@ -129,6 +129,12 @@ void uTLGBot::set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end)
     _client->set_cert(_tlg_api_ca_pem_start, _tlg_api_ca_pem_end);
 }
 
+// Set/Modify Telegram Server Certificate
+void uTLGBot::set_cert(const char* cert_https_server)
+{
+    _client->set_cert(cert_https_server);
+}
+
 // Set/Modify Telegram getUpdates polling request timeout
 void uTLGBot::set_polling_timeout(const uint8_t seconds)
 {

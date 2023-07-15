@@ -193,25 +193,24 @@ class uTLGBot
 
         // Public Methods
         uTLGBot(const char* token, const bool dont_keep_connection=false);
-        #if defined(WIN32) || defined(_WIN32) || defined(__linux__) // Native (Windows, Linux)
-            ~uTLGBot(void);
-        #endif
+        ~uTLGBot();
         void set_debug(const uint8_t debug_level);
         void set_token(const char* token);
         void set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end=NULL);
+        void set_cert(const char* cert_https_server);
         void set_polling_timeout(const uint8_t seconds);
-        char* get_token(void);
-        uint8_t get_polling_timeout(void);
-        uint8_t connect(void);
-        void disconnect(void);
-        bool is_connected(void);
-        uint8_t getMe(void);
+        char* get_token();
+        uint8_t get_polling_timeout();
+        uint8_t connect();
+        void disconnect();
+        bool is_connected();
+        uint8_t getMe();
         uint8_t sendMessage(const char* chat_id, const char* text, const char* parse_mode="",
             bool disable_web_page_preview=false, bool disable_notification=false,
             uint64_t reply_to_message_id=0, const char* reply_markup="");
         uint8_t sendReplyKeyboardMarkup(const char* chat_id, const char* text,
             const char* keyboard);
-        uint8_t getUpdates(void);
+        uint8_t getUpdates();
 
     private:
         // Private Attributtes
