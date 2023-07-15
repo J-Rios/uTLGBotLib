@@ -237,7 +237,7 @@ class uTLGBot
             const size_t request_response_max_size,
             const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
 
-        void clear_msg_data(void);
+        void clear_msg_data();
         void cant_create_send_msg(const char* msg);
         uint32_t json_parse_str(const char* json_str, const size_t json_str_len,
             jsmntok_t* json_tokens, const uint32_t json_tokens_len);

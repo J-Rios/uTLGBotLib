@@ -47,12 +47,12 @@ class MultiHTTPSClient
 {
     public:
         // Public Methods
-        MultiHTTPSClient(void);
+        MultiHTTPSClient();
         void set_debug(const bool debug);
         void set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end);
         int8_t connect(const char* host, uint16_t port);
-        void disconnect(void);
-        bool is_connected(void);
+        void disconnect();
+        bool is_connected();
         uint8_t get(const char* uri, const char* host, char* response, const size_t response_len,
                 const unsigned long response_timeout=HTTP_WAIT_RESPONSE_TIMEOUT);
         uint8_t post(const char* uri, const char* host, char* request_response,
@@ -68,7 +68,7 @@ class MultiHTTPSClient
         bool _debug;
 
         // Private Methods
-        void release_tls_elements(void);
+        void release_tls_elements();
         size_t write(const char* request);
         size_t read(char* response, const size_t response_len);
         uint8_t read_response(char* response, const size_t response_max_len,
