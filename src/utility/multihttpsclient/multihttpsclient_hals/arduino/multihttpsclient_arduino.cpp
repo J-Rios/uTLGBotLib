@@ -73,22 +73,21 @@ void MultiHTTPSClient::set_cert(const char* cert_https_server)
 {
     _cert_https_server = cert_https_server;
 
-#ifdef ESP8266
-    // ESP8266 doesn't have a hardware element for SSL/TLS acceleration
-    // Note for users: Don't set a cert to ignore server authenticy and trust verification
-    // to get a faster response
     if(_cert_https_server != NULL)
     {
-        _cert.append(_cert_https_server);
-        _client.setTrustAnchors(&_cert);
+        #ifdef ESP8266
+            // ESP8266 doesn't have a hardware element for SSL/TLS acceleration
+            // Note for users: Don't set a cert to ignore server authenticy and trust verification
+            // to get a faster response
+            _cert.append(_cert_https_server);
+            _client.setTrustAnchors(&_cert);
+        #else
+            // ESP32 has a hardware element for SSL/TLS acceleration, so it could be use
+            _client.setCACert(_cert_https_server);
+        #endif
     }
     else
-        _client.setInsecure();
-#else
-    // ESP32 has a hardware element for SSL/TLS acceleration, so it could be use
-    if(_cert_https_server != NULL)
-        _client.setCACert(_cert_https_server);
-#endif
+    {   _client.setInsecure();   }
 }
 
 // Make HTTPS client connection to server
