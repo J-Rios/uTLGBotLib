@@ -77,8 +77,8 @@ uTLGBot::uTLGBot(const char* token, const bool dont_keep_connection)
     memset(_buffer, '\0', HTTP_MAX_RES_LENGTH);
     memset(_json_value_str, '\0', MAX_JSON_STR_LEN);
     memset(_json_subvalue_str, '\0', MAX_JSON_SUBVAL_STR_LEN);
-    memset(_json_elements, 0, MAX_JSON_ELEMENTS);
-    memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
+    memset(_json_elements, 0, (sizeof(jsmntok_t)*MAX_JSON_ELEMENTS));
+    memset(_json_subelements, 0, (sizeof(jsmntok_t)*MAX_JSON_SUBELEMENTS));
     _long_poll_timeout = DEFAULT_TELEGRAM_LONG_POLL_S;
     _last_received_msg = UINT64_MAX;
     _dont_keep_connection = dont_keep_connection;
@@ -453,8 +453,8 @@ uint8_t uTLGBot::getUpdates(void)
     uint32_t key_position;
 
     // Clear json elements objects
-    memset(_json_elements, 0, MAX_JSON_ELEMENTS);
-    memset(_json_subelements, 0, MAX_JSON_SUBELEMENTS);
+    memset(_json_elements, 0, (sizeof(jsmntok_t)*MAX_JSON_ELEMENTS));
+    memset(_json_subelements, 0, (sizeof(jsmntok_t)*MAX_JSON_SUBELEMENTS));
 
     // Parse message string as JSON and get each element
     num_elements = json_parse_str(ptr_response, strlen(ptr_response), _json_elements,
