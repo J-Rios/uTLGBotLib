@@ -19,7 +19,7 @@ if "PIOFRAMEWORK" in env:
 
 # Check build and ignore custom mbedtls for ESP32 (To avoid conflict with esp-idf mbedtls component)
 if ("arduino" in build_framework) or ("espidf" in build_framework):
-    print("ESP32 Build detected, ignoring multihttpsclient/mbedtls.")
+    print("Embedded Build detected, ignoring multihttpsclient/mbedtls.")
     env.AddBuildMiddleware(skip_file_from_build, "*multihttpsclient/mbedtls/*")
 else:
     print("Generic Native Build detected, using src/utility/multihttpsclient/mbedtls.")
