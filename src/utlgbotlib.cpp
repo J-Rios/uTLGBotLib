@@ -124,7 +124,9 @@ void uTLGBot::set_cert(const uint8_t* ca_pem_start, const uint8_t* ca_pem_end)
 // Set/Modify Telegram Server Certificate
 void uTLGBot::set_cert(const char* cert_https_server)
 {
-    _client.set_cert(cert_https_server);
+    #if defined(ARDUINO)
+        _client.set_cert(cert_https_server);
+    #endif
 }
 
 // Set/Modify Telegram getUpdates polling request timeout
