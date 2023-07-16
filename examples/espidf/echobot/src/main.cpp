@@ -15,24 +15,44 @@
 
 // Device libraries (ESP-IDF)
 #include "sdkconfig.h"
-#include "nvs_flash.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_system.h"
 #include "esp_wifi.h"
-#include "esp_event_loop.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
 
-// Custom libraries
+// Lightweight TCP-IP Stack library
+#include "lwip/err.h"
+#include "lwip/sys.h"
+
+// Telegram libraries
 #include "utlgbotlib.h"
 
 /**************************************************************************************************/
+
+/* Defines & Constants */
 
 // WiFi Parameters
 #define WIFI_SSID "mynet1234"
 #define WIFI_PASS "password1234"
 #define MAX_CONN_FAIL 50
-#define MAX_LENGTH_WIFI_SSID 31
-#define MAX_LENGTH_WIFI_PASS 63
+#define MAX_LENGTH_WIFI_SSID 32
+#define MAX_LENGTH_WIFI_PASS 64
 
 // Telegram Bot Token (Get from Botfather)
-#define TLG_TOKEN "XXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+#define TLG_TOKEN "XXXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+// Component Tag identification
+static const char TAG[] = "echobot";
+
+// The event group allows multiple bits for each event, but we only care about two events:
+// - we are connected to the AP with an IP
+// - we failed to connect after the maximum amount of retries
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
 
 /**************************************************************************************************/
 
@@ -41,13 +61,19 @@
 extern "C" { void app_main(void); }
 void nvs_init(void);
 void wifi_init_stat(void);
-static esp_err_t network_event_handler(void *ctx, system_event_t *e);
+static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id,
+    void* event_data);
+bool is_wifi_connected();
 
 /**************************************************************************************************/
 
 /* Globals */
-volatile bool wifi_connected = false;
-volatile bool wifi_has_ip = false;
+
+// FreeRTOS event group to signal when we are connected
+static EventGroupHandle_t s_wifi_event_group;
+
+// Number of connection retries
+static int s_retry_num = 0;
 
 /**************************************************************************************************/
 
@@ -66,7 +92,7 @@ void app_main(void)
     while(1)
     {
         // Check if device is not connected
-        if(!wifi_connected || !wifi_has_ip)
+        if(is_wifi_connected() == false)
         {
             // Wait 100ms and check again
             vTaskDelay(100/portTICK_PERIOD_MS);
@@ -76,13 +102,14 @@ void app_main(void)
         // Check and handle any received message
         while(Bot.getUpdates())
         {
-            printf("Message received from %s, echo it back...\n", Bot.received_msg.from.first_name);
+            ESP_LOGI(TAG, "Message received from %s, echo it back...\n",
+                Bot.received_msg.from.first_name);
             if(!Bot.sendMessage(Bot.received_msg.chat.id, Bot.received_msg.text))
             {
-                printf("Send fail.\n");
+                ESP_LOGI(TAG, "Send fail.\n");
                 continue;
             }
-            printf("Send OK.\n\n");
+            ESP_LOGI(TAG, "Send OK.\n\n");
         }
 
         // Wait 1s for next iteration
@@ -109,96 +136,116 @@ void nvs_init(void)
 // Init WiFi interface
 void wifi_init_stat(void)
 {
-    static wifi_init_config_t wifi_init_cfg;
-    static wifi_config_t wifi_cfg;
+    ESP_LOGI(TAG, "Initializing TCP-IP adapter...\n");
 
-    printf("Initializing TCP-IP adapter...\n");
+    s_wifi_event_group = xEventGroupCreate();
 
-    tcpip_adapter_init();
+    // Start network interface
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
 
-    wifi_init_cfg = WIFI_INIT_CONFIG_DEFAULT();
+    // Initialize WiFi with default config
+    wifi_init_config_t wifi_init_cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_cfg));
-    esp_wifi_set_mode(WIFI_MODE_STA);
 
-    // Set TCP-IP event handler callback
-    ESP_ERROR_CHECK(esp_event_loop_init(network_event_handler, NULL));
+    // Register Events
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &event_handler,
+                                                        NULL,
+                                                        &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &event_handler,
+                                                        NULL,
+                                                        &instance_got_ip));
 
-    // Create and launch WiFi Station
-    memcpy(wifi_cfg.sta.ssid, WIFI_SSID, MAX_LENGTH_WIFI_SSID+1);
-    memcpy(wifi_cfg.sta.password, WIFI_PASS, MAX_LENGTH_WIFI_PASS+1);
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_cfg));
+    // Prepare WiFi SSID and Password
+    static wifi_config_t wifi_cfg;
+    size_t len = strlen(WIFI_SSID);
+    if (len > MAX_LENGTH_WIFI_SSID)
+    {   len = MAX_LENGTH_WIFI_SSID;   }
+    memcpy(wifi_cfg.sta.ssid, WIFI_SSID, len);
+    len = strlen(WIFI_PASS);
+    if (len > MAX_LENGTH_WIFI_PASS)
+    {   len = MAX_LENGTH_WIFI_PASS;   }
+    memcpy((void*)wifi_cfg.sta.ssid, (const void*)WIFI_PASS, len);
+    //wifi_cfg.sta.thresholdwifi_cfg.sta.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+    //wifi_cfg.sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
+
+    // Set Station Mode and apply custom config
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    printf("TCP-IP adapter successfuly initialized.\n");
+    ESP_LOGI(TAG, "TCP-IP adapter successfuly initialized.\n");
+}
+
+// Check if WiFi connection and IP is available
+bool is_wifi_connected()
+{
+    bool wifi_ready = false;
+
+    // Waiting until either the connection is established (WIFI_CONNECTED_BIT)
+    // or connection failed for the maximum number of retries (WIFI_FAIL_BIT).
+    // The bits are set by event_handler()
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+            pdFALSE,
+            pdFALSE,
+            portMAX_DELAY);
+
+    // xEventGroupWaitBits() returns the bits before the call returned,
+    // hence we can test which event actually happened
+    if (bits & WIFI_CONNECTED_BIT)
+    {   wifi_ready = true;   }
+
+    else if (bits & WIFI_FAIL_BIT)
+    {
+        ESP_LOGI(TAG, "Failed to connect to SSID: %s", WIFI_SSID);
+    }
+    else
+    {   ESP_LOGE(TAG, "Unexpected event");   }
+
+    return wifi_ready;
 }
 
 /**************************************************************************************************/
 
 /* WiFi Change Event Handler */
 
-static esp_err_t network_event_handler(void *ctx, system_event_t *e)
+static void event_handler(void* arg, esp_event_base_t event_base,
+        int32_t event_id, void* event_data)
 {
-    static uint8_t conn_fail_retries = 0;
+    // WiFi Interface started and ready
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
+    {   esp_wifi_connect();   }
 
-    switch(e->event_id)
+    // WiFi Disconnection
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        case SYSTEM_EVENT_STA_START:
-            printf("WiFi Station interface Up.\n");
-            printf("Connecting...\n");
+        ESP_LOGI(TAG,"Disconnected from AP");
+        if (s_retry_num < MAX_CONN_FAIL)
+        {
+            s_retry_num = s_retry_num + 1;
+            ESP_LOGI(TAG, "Retrying to connect...");
             esp_wifi_connect();
-            break;
-
-        case SYSTEM_EVENT_STA_CONNECTED:
-            printf("WiFi connected.\n");
-            printf("Waiting for IP...\n");
-            wifi_connected = true;
-            break;
-
-        case SYSTEM_EVENT_STA_GOT_IP:
-            printf("WiFi IPv4 received: %s\n", ip4addr_ntoa(&e->event_info.got_ip.ip_info.ip));
-            wifi_has_ip = true;
-            break;
-
-        case SYSTEM_EVENT_STA_LOST_IP:
-            printf("WiFi IP lost.\n");
-            wifi_has_ip = false;
-            break;
-
-        case SYSTEM_EVENT_STA_DISCONNECTED:
-            if(wifi_connected)
-            {
-                printf("WiFi disconnected\n");
-                conn_fail_retries = 0;
-            }
-            else
-            {
-                printf("Can't connect to AP, trying again...\n");
-                conn_fail_retries = conn_fail_retries + 1;
-            }
-            wifi_has_ip = false;
-            wifi_connected = false;
-            if(conn_fail_retries < MAX_CONN_FAIL)
-                esp_wifi_connect();
-            else
-            {
-                printf("WiFi connection fail %d times.\n", MAX_CONN_FAIL);
-                printf("Rebooting the system...\n\n");
-                esp_restart();
-            }
-            break;
-
-        case SYSTEM_EVENT_STA_STOP:
-            printf("WiFi interface stopped\n");
-            conn_fail_retries = 0;
-            wifi_has_ip = false;
-            wifi_connected = false;
-            break;
-
-        default:
-            break;
+        }
+        else
+        {   xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);   }
     }
 
-    return ESP_OK;
+    // Received IP
+    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
+    {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_num = 0;
+        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+    }
 }
 
 /**************************************************************************************************/
