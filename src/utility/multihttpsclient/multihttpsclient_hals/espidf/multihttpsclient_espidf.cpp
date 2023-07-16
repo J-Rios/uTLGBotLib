@@ -2,8 +2,8 @@
 // File: multihttpsclient_espidf.cpp
 // Description: Multiplatform HTTPS Client implementation for ESP32 ESPIDF Framework.
 // Created on: 11 may. 2019
-// Last modified date: 14 apr. 2020
-// Version: 1.0.4
+// Last modified date: 16 jul. 2023
+// Version: 1.1.0
 /**************************************************************************************************/
 
 #if defined(ESP_IDF)
@@ -13,6 +13,11 @@
 /* Libraries */
 
 #include "multihttpsclient_espidf.h"
+
+// Device libraries (ESP-IDF)
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_timer.h"
 
 /**************************************************************************************************/
 
@@ -85,7 +90,7 @@ int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
     int conn_status;
 
     // Reserve memory for TLS (Warning, here we are dynamically reserving some memory in HEAP)
-    _tls = (esp_tls*)calloc(1, sizeof(esp_tls_t));
+    _tls = esp_tls_init();
     if(!_tls)
     {
         _println(F("[HTTPS] Error: Cannot reserve memory for TLS."));
@@ -125,14 +130,16 @@ int8_t MultiHTTPSClient::connect(const char* host, uint16_t port)
             break;
         }
         else if(conn_status == 1) // Connection Success
+        {
+            _connected = true;
             break;
+        }
 
         // Release CPU usage
         _delay(10);
     }
 
-    _connected = is_connected();
-    return _connected;
+    return is_connected();
 }
 
 // HTTPS client disconnect from server
@@ -140,7 +147,7 @@ void MultiHTTPSClient::disconnect(void)
 {
     if(_tls != NULL)
     {
-        esp_tls_conn_delete(_tls);
+        esp_tls_conn_destroy(_tls);
         _tls = NULL;
     }
     _connected = false;
@@ -149,16 +156,6 @@ void MultiHTTPSClient::disconnect(void)
 // Check if HTTPS client is connected
 bool MultiHTTPSClient::is_connected(void)
 {
-    if(_tls != NULL)
-    {
-        if(_tls->conn_state == ESP_TLS_DONE)
-            _connected = true;
-        else
-            _connected = false;
-    }
-    else
-        _connected = false;
-
     return _connected;
 }
 
